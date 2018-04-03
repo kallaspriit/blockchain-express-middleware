@@ -37,28 +37,65 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var dotenv = require("dotenv");
+var express = require("express");
+var fs = require("fs");
+var http = require("http");
+var https = require("https");
 var src_1 = require("../src");
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
+// constants
+var HTTP_PORT = 80;
+var DEFAULT_PORT = 3000;
 // extract configuration from the .env environment variables
 var config = {
-    apiKey: process.env.API_KEY !== undefined ? process.env.API_KEY : "",
-    xPub: process.env.XPUB !== undefined ? process.env.XPUB : "",
+    server: {
+        port: process.env.SERVER_PORT !== undefined ? process.env.SERVER_PORT : DEFAULT_PORT,
+        useSSL: process.env.SERVER_USE_SSL === "true",
+        cert: process.env.SERVER_CERT !== undefined ? process.env.SERVER_CERT : "",
+        key: process.env.SERVER_KEY !== undefined ? process.env.SERVER_KEY : "",
+    },
+    api: {
+        apiKey: process.env.API_KEY !== undefined ? process.env.API_KEY : "",
+        xPub: process.env.API_XPUB !== undefined ? process.env.API_XPUB : "",
+    },
 };
-// run the example application (IIFE needed to use async)
-(function () { return __awaiter(_this, void 0, void 0, function () {
-    var api, callbackUrl, receivingAddress;
+// initiate api
+var api = new src_1.Api(config.api);
+// create the express server application
+var app = express();
+// handle index view request
+app.get("/", function (_request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
+    var callbackUrl, receivingAddress;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                api = new src_1.Api(config);
                 callbackUrl = "https://example.com/handle-payment";
                 return [4 /*yield*/, api.generateReceivingAddress(callbackUrl)];
             case 1:
                 receivingAddress = _a.sent();
-                console.log(receivingAddress);
+                response.send(receivingAddress);
                 return [2 /*return*/];
         }
     });
-}); })().catch(function (error) { return console.error(error); });
+}); });
+// create either http or https server depending on SSL configuration
+var server = config.server.useSSL
+    ? https.createServer({
+        cert: fs.readFileSync(config.server.cert),
+        key: fs.readFileSync(config.server.key),
+    }, app)
+    : http.createServer(app);
+// start the server
+server.listen(config.server.port, function () {
+    console.log("server started on port " + config.server.port);
+});
+// also start a http server to redirect to https if ssl is enabled
+if (config.server.useSSL) {
+    express()
+        .use(function (request, response, _next) {
+        response.redirect("https://" + request.hostname + request.originalUrl);
+    })
+        .listen(HTTP_PORT);
+}
 //# sourceMappingURL=index.js.map
