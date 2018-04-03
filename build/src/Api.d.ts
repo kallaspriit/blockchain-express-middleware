@@ -1,0 +1,70 @@
+/**
+ * Base configuration that has reasonable defaults and do no require to be redefined by the user.
+ */
+export interface IBlockchainBaseConfig {
+    apiBaseUrl: string;
+    gapLimit?: number;
+}
+/**
+ * Configuration required to be provided by the user.
+ */
+export interface IBlockchainRequiredConfig {
+    apiKey: string;
+    xPub: string;
+}
+/**
+ * Configuration that the user provides, includes mandatory user configuration and optional base configuration.
+ */
+export declare type IBlockchainUserConfig = Partial<IBlockchainBaseConfig> & IBlockchainRequiredConfig;
+/**
+ * Combined configuration including base and user provided configurations.
+ */
+export declare type IBlockchainConfig = IBlockchainBaseConfig & IBlockchainRequiredConfig;
+/**
+ * Receiving address response.
+ */
+export interface IReceivingAddress {
+    address: string;
+    index: number;
+    callback: string;
+}
+export interface IGenerateReceivingAddressParameters {
+    xpub: string;
+    callback: string;
+    key: string;
+    gap_limit?: number;
+}
+export interface ILog {
+    trace(message?: any, ...optionalParams: any[]): void;
+    debug(message?: any, ...optionalParams: any[]): void;
+    info(message?: any, ...optionalParams: any[]): void;
+    warn(message?: any, ...optionalParams: any[]): void;
+    error(message?: any, ...optionalParams: any[]): void;
+    [x: string]: any;
+}
+/**
+ * Default base configuration.
+ */
+export declare const defaultBaseConfig: IBlockchainBaseConfig;
+/**
+ * Provides API for receiving payments through blockchain.info service.
+ *
+ * To get the extended public key (xPub), copy your mnemonic words to http://bip32.org/ "Passphrase" field, wait for it
+ * to generate the extended key and use the value of "Derived Public Key" as the "xPub" parameter.
+ *
+ * See https://blockchain.info/api/api_receive for API documentation.
+ */
+export default class Api {
+    private readonly log;
+    private readonly config;
+    /**
+     * Constructor.
+     *
+     * Accepts configuration and optional logger to use.
+     *
+     * @param userConfig User configuration (can override base configuration as well)
+     * @param log Logger to use (defaults to console, but you can use bunyan etc)
+     */
+    constructor(userConfig: IBlockchainUserConfig, log?: ILog);
+    generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
+}
