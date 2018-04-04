@@ -3,7 +3,7 @@
   "execMap": {
     "ts": "ts-node"
   },
-  "watch": ["src/**/*", "example/**/*"],
+  "watch": ["src/**/*", "example/**/*", ".env"],
   "ignore": [".git", "node_modules/**/node_modules"],
   "verbose": false,
   "env": {

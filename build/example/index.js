@@ -36,11 +36,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
+var bodyParser = require("body-parser");
 var dotenv = require("dotenv");
 var express = require("express");
 var fs = require("fs");
 var http = require("http");
 var https = require("https");
+var querystring = require("querystring");
 var src_1 = require("../src");
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -50,6 +52,7 @@ var DEFAULT_PORT = 3000;
 // extract configuration from the .env environment variables
 var config = {
     server: {
+        host: process.env.SERVER_HOST !== undefined ? process.env.SERVER_HOST : "localhost",
         port: process.env.SERVER_PORT !== undefined ? process.env.SERVER_PORT : DEFAULT_PORT,
         useSSL: process.env.SERVER_USE_SSL === "true",
         cert: process.env.SERVER_CERT !== undefined ? process.env.SERVER_CERT : "",
@@ -59,24 +62,69 @@ var config = {
         apiKey: process.env.API_KEY !== undefined ? process.env.API_KEY : "",
         xPub: process.env.API_XPUB !== undefined ? process.env.API_XPUB : "",
     },
+    app: {
+        address: process.env.APP_ADDRESS !== undefined ? process.env.APP_ADDRESS : "",
+    },
 };
 // initiate api
 var api = new src_1.Api(config.api);
 // create the express server application
 var app = express();
+// parse application/x-www-form-urlencoded and  application/json
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 // handle index view request
 app.get("/", function (_request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-    var callbackUrl, receivingAddress;
     return __generator(this, function (_a) {
-        switch (_a.label) {
+        response.send("\n    <h1>Request Bitcoin payment</h1>\n\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"address\" value=\"" + config.app.address + "\" /> Address\n      </p>\n      <p>\n        <input type=\"text\" name=\"amount\" value=\"0.001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n  ");
+        return [2 /*return*/];
+    });
+}); });
+// handle payment form request
+app.post("/pay", function (request, response, next) { return __awaiter(_this, void 0, void 0, function () {
+    var _a, address, amount, message, qrCodeParameters, qrCodePayload, callbackUrl, receivingAddress, error_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
             case 0:
-                callbackUrl = "https://example.com/handle-payment";
-                return [4 /*yield*/, api.generateReceivingAddress(callbackUrl)];
+                _a = request.body, address = _a.address, amount = _a.amount, message = _a.message;
+                qrCodeParameters = {
+                    amount: amount,
+                    message: message,
+                };
+                qrCodePayload = "bitcoin:" + address + "?" + querystring.stringify(qrCodeParameters);
+                callbackUrl = getAbsoluteUrl("/handle-payment");
+                _b.label = 1;
             case 1:
-                receivingAddress = _a.sent();
-                response.send(receivingAddress);
-                return [2 /*return*/];
+                _b.trys.push([1, 3, , 4]);
+                return [4 /*yield*/, api.generateReceivingAddress(callbackUrl)];
+            case 2:
+                receivingAddress = _b.sent();
+                response.send({
+                    address: address,
+                    amount: amount,
+                    message: message,
+                    receivingAddress: receivingAddress,
+                    qrCodeParameters: qrCodeParameters,
+                    qrCodePayload: qrCodePayload,
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_1 = _b.sent();
+                next(error_1);
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
+    });
+}); });
+// handle payment update request
+app.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
+    return __generator(this, function (_a) {
+        console.log({
+            query: request.query,
+            body: request.body,
+        }, "got handle payment update");
+        response.send("pending");
+        return [2 /*return*/];
     });
 }); });
 // create either http or https server depending on SSL configuration
@@ -97,5 +145,10 @@ if (config.server.useSSL) {
         response.redirect("https://" + request.hostname + request.originalUrl);
     })
         .listen(HTTP_PORT);
+}
+function getAbsoluteUrl(path) {
+    var port = config.server.port === HTTP_PORT ? "" : ":" + config.server.port;
+    var url = ("" + config.server.host + port + path).replace(/\/{2,}/g, "/");
+    return (config.server.useSSL ? "https" : "http") + "://" + url;
 }
 //# sourceMappingURL=index.js.map
