@@ -92,9 +92,13 @@ var Api = /** @class */ (function () {
         this.log = log;
         this.config = __assign({}, exports.defaultBaseConfig, userConfig);
     }
-    Api.getQrImage = function (text, options) {
+    Api.getPaymentRequestQrCode = function (address, amount, message, options) {
         if (options === void 0) { options = {}; }
-        return qr.image(text, __assign({ size: 4, type: "png" }, options));
+        var payload = "bitcoin:" + address + "?" + querystring.stringify({
+            amount: amount.toString(),
+            message: message,
+        });
+        return qr.image(payload, __assign({ size: 4, type: "png" }, options));
     };
     Api.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {

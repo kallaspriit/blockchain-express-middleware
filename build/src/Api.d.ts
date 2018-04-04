@@ -66,6 +66,6 @@ export default class Api {
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
     constructor(userConfig: IBlockchainUserConfig, log?: ILog);
-    static getQrImage(text: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
+    static getPaymentRequestQrCode(address: string, amount: number | string, message: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
     generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
 }

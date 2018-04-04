@@ -67,26 +67,25 @@ app.get("/", async (_request, response, _next) => {
 // handle payment form request
 app.post("/pay", async (request, response, next) => {
   const { address, amount, message } = request.body;
-  const qrCodeParameters = {
-    amount,
-    message,
-  };
-  const qrCodePayload = `bitcoin:${address}?${querystring.stringify(qrCodeParameters)}`;
   const callbackUrl = getAbsoluteUrl("/handle-payment");
-  const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify({ payload: qrCodePayload })}`);
 
   try {
-    const receivingAddress = await api.generateReceivingAddress(callbackUrl);
+    const paymentRequest = await api.generateReceivingAddress(callbackUrl);
+    const qrCodeParameters = { address: paymentRequest.address, amount, message };
+    const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify(qrCodeParameters)}`);
 
-    response.send({
-      address,
-      amount,
-      message,
-      receivingAddress,
-      qrCodeParameters,
-      qrCodePayload,
-      qrCodeUrl,
-    });
+    response.send(`
+      <h1>Payment request</h1>
+
+      <ul>
+        <li><strong>Merchant address:</strong> ${address}</li>
+        <li><strong>Receiving address:</strong> ${paymentRequest.address}</li>
+        <li><strong>Amount:</strong> ${amount}</li>
+        <li><strong>Message:</strong> ${message}</li>
+      </ul>
+
+      <img src="${qrCodeUrl}"/>
+    `);
   } catch (error) {
     next(error);
   }
@@ -94,12 +93,12 @@ app.post("/pay", async (request, response, next) => {
 
 // handle qr image request
 app.get("/qr", async (request, response, _next) => {
-  const { payload } = request.query;
+  const { address, amount, message } = request.query;
 
-  const image = Api.getQrImage(payload);
+  const paymentRequestQrCode = Api.getPaymentRequestQrCode(address, amount, message);
 
   response.setHeader("Content-Type", "image/png");
-  image.pipe(response);
+  paymentRequestQrCode.pipe(response);
 });
 
 // handle payment update request
@@ -127,9 +126,15 @@ const server = config.server.useSSL
   : http.createServer(app);
 
 // start the server
-server.listen(config.server.port, () => {
-  console.log(`server started on port ${config.server.port}`);
-});
+server.listen(
+  {
+    host: "0.0.0.0",
+    port: config.server.port,
+  },
+  () => {
+    console.log(`server started on port ${config.server.port}`);
+  },
+);
 
 // also start a http server to redirect to https if ssl is enabled
 if (config.server.useSSL) {

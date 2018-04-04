@@ -98,8 +98,18 @@ export default class Api {
     };
   }
 
-  public static getQrImage(text: string, options: Partial<qr.Options> = {}): NodeJS.ReadableStream {
-    return qr.image(text, {
+  public static getPaymentRequestQrCode(
+    address: string,
+    amount: number | string,
+    message: string,
+    options: Partial<qr.Options> = {},
+  ): NodeJS.ReadableStream {
+    const payload = `bitcoin:${address}?${querystring.stringify({
+      amount: amount.toString(),
+      message,
+    })}`;
+
+    return qr.image(payload, {
       size: 4,
       type: "png",
       ...options,

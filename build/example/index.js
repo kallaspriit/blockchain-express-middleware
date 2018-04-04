@@ -82,33 +82,21 @@ app.get("/", function (_request, response, _next) { return __awaiter(_this, void
 }); });
 // handle payment form request
 app.post("/pay", function (request, response, next) { return __awaiter(_this, void 0, void 0, function () {
-    var _a, address, amount, message, qrCodeParameters, qrCodePayload, callbackUrl, qrCodeUrl, receivingAddress, error_1;
+    var _a, address, amount, message, callbackUrl, paymentRequest, qrCodeParameters, qrCodeUrl, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 _a = request.body, address = _a.address, amount = _a.amount, message = _a.message;
-                qrCodeParameters = {
-                    amount: amount,
-                    message: message,
-                };
-                qrCodePayload = "bitcoin:" + address + "?" + querystring.stringify(qrCodeParameters);
                 callbackUrl = getAbsoluteUrl("/handle-payment");
-                qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify({ payload: qrCodePayload }));
                 _b.label = 1;
             case 1:
                 _b.trys.push([1, 3, , 4]);
                 return [4 /*yield*/, api.generateReceivingAddress(callbackUrl)];
             case 2:
-                receivingAddress = _b.sent();
-                response.send({
-                    address: address,
-                    amount: amount,
-                    message: message,
-                    receivingAddress: receivingAddress,
-                    qrCodeParameters: qrCodeParameters,
-                    qrCodePayload: qrCodePayload,
-                    qrCodeUrl: qrCodeUrl,
-                });
+                paymentRequest = _b.sent();
+                qrCodeParameters = { address: paymentRequest.address, amount: amount, message: message };
+                qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify(qrCodeParameters));
+                response.send("\n      <h1>Payment request</h1>\n\n      <ul>\n        <li><strong>Merchant address:</strong> " + address + "</li>\n        <li><strong>Receiving address:</strong> " + paymentRequest.address + "</li>\n        <li><strong>Amount:</strong> " + amount + "</li>\n        <li><strong>Message:</strong> " + message + "</li>\n      </ul>\n\n      <img src=\"" + qrCodeUrl + "\"/>\n    ");
                 return [3 /*break*/, 4];
             case 3:
                 error_1 = _b.sent();
@@ -120,12 +108,12 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
 }); });
 // handle qr image request
 app.get("/qr", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-    var payload, image;
-    return __generator(this, function (_a) {
-        payload = request.query.payload;
-        image = src_1.Api.getQrImage(payload);
+    var _a, address, amount, message, paymentRequestQrCode;
+    return __generator(this, function (_b) {
+        _a = request.query, address = _a.address, amount = _a.amount, message = _a.message;
+        paymentRequestQrCode = src_1.Api.getPaymentRequestQrCode(address, amount, message);
         response.setHeader("Content-Type", "image/png");
-        image.pipe(response);
+        paymentRequestQrCode.pipe(response);
         return [2 /*return*/];
     });
 }); });
@@ -148,7 +136,10 @@ var server = config.server.useSSL
     }, app)
     : http.createServer(app);
 // start the server
-server.listen(config.server.port, function () {
+server.listen({
+    host: "0.0.0.0",
+    port: config.server.port,
+}, function () {
     console.log("server started on port " + config.server.port);
 });
 // also start a http server to redirect to https if ssl is enabled
