@@ -66,6 +66,12 @@
   version "9.6.1"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-9.6.1.tgz#e2d374ef15b315b48e7efc308fa1a7cd51faa06c"
 
+"@types/qr-image@^3.2.1":
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/@types/qr-image/-/qr-image-3.2.1.tgz#002f5b654c2c615e1715100a26bc81748bba85fe"
+  dependencies:
+    "@types/node" "*"
+
 "@types/serve-static@*":
   version "1.13.1"
   resolved "https://registry.yarnpkg.com/@types/serve-static/-/serve-static-1.13.1.tgz#1d2801fa635d274cd97d4ec07e26b21b44127492"
@@ -3065,6 +3071,10 @@ punycode@^1.4.1:
 punycode@^2.1.0:
   version "2.1.0"
   resolved "https://registry.yarnpkg.com/punycode/-/punycode-2.1.0.tgz#5f863edc89b96db09074bad7947bf09056ca4e7d"
+
+qr-image@^3.2.0:
+  version "3.2.0"
+  resolved "https://registry.yarnpkg.com/qr-image/-/qr-image-3.2.0.tgz#9fa8295beae50c4a149cf9f909a1db464a8672e8"
 
 qs@6.5.1, qs@~6.5.1:
   version "6.5.1"

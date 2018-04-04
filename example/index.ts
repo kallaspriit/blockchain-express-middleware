@@ -73,6 +73,7 @@ app.post("/pay", async (request, response, next) => {
   };
   const qrCodePayload = `bitcoin:${address}?${querystring.stringify(qrCodeParameters)}`;
   const callbackUrl = getAbsoluteUrl("/handle-payment");
+  const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify({ payload: qrCodePayload })}`);
 
   try {
     const receivingAddress = await api.generateReceivingAddress(callbackUrl);
@@ -84,10 +85,21 @@ app.post("/pay", async (request, response, next) => {
       receivingAddress,
       qrCodeParameters,
       qrCodePayload,
+      qrCodeUrl,
     });
   } catch (error) {
     next(error);
   }
+});
+
+// handle qr image request
+app.get("/qr", async (request, response, _next) => {
+  const { payload } = request.query;
+
+  const image = Api.getQrImage(payload);
+
+  response.setHeader("Content-Type", "image/png");
+  image.pipe(response);
 });
 
 // handle payment update request

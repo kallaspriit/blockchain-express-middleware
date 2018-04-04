@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import * as qr from "qr-image";
 /**
  * Base configuration that has reasonable defaults and do no require to be redefined by the user.
  */
@@ -35,13 +37,11 @@ export interface IGenerateReceivingAddressParameters {
     gap_limit?: number;
 }
 export interface ILog {
-    trace(message?: any, ...optionalParams: any[]): void;
-    debug(message?: any, ...optionalParams: any[]): void;
     info(message?: any, ...optionalParams: any[]): void;
-    warn(message?: any, ...optionalParams: any[]): void;
     error(message?: any, ...optionalParams: any[]): void;
     [x: string]: any;
 }
+export declare const dummyLog: ILog;
 /**
  * Default base configuration.
  */
@@ -66,5 +66,6 @@ export default class Api {
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
     constructor(userConfig: IBlockchainUserConfig, log?: ILog);
+    static getQrImage(text: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
     generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
 }

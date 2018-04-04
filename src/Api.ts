@@ -1,4 +1,5 @@
 import Axios from "axios";
+import * as qr from "qr-image";
 import * as querystring from "querystring";
 
 /**
@@ -43,16 +44,26 @@ export interface IGenerateReceivingAddressParameters {
   gap_limit?: number;
 }
 
-/* tslint:disable:no-any */
+/* tslint:disable:no-any prefer-function-over-method */
 export interface ILog {
-  trace(message?: any, ...optionalParams: any[]): void;
-  debug(message?: any, ...optionalParams: any[]): void;
+  // trace(message?: any, ...optionalParams: any[]): void;
+  // debug(message?: any, ...optionalParams: any[]): void;
   info(message?: any, ...optionalParams: any[]): void;
-  warn(message?: any, ...optionalParams: any[]): void;
+  // warn(message?: any, ...optionalParams: any[]): void;
   error(message?: any, ...optionalParams: any[]): void;
   [x: string]: any;
 }
-/* tslint:enable:no-any */
+
+// dummy log that does not do anything
+export const dummyLog: ILog = {
+  info: (_message?: any, ..._optionalParams: any[]) => {
+    /* dummy */
+  },
+  error: (_message?: any, ..._optionalParams: any[]) => {
+    /* dummy */
+  },
+};
+/* tslint:enable:no-any prefer-function-over-method */
 
 /**
  * Default base configuration.
@@ -80,11 +91,19 @@ export default class Api {
    * @param userConfig User configuration (can override base configuration as well)
    * @param log Logger to use (defaults to console, but you can use bunyan etc)
    */
-  public constructor(userConfig: IBlockchainUserConfig, private readonly log: ILog = console) {
+  public constructor(userConfig: IBlockchainUserConfig, private readonly log: ILog = dummyLog) {
     this.config = {
       ...defaultBaseConfig,
       ...userConfig,
     };
+  }
+
+  public static getQrImage(text: string, options: Partial<qr.Options> = {}): NodeJS.ReadableStream {
+    return qr.image(text, {
+      size: 4,
+      type: "png",
+      ...options,
+    });
   }
 
   public async generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress> {

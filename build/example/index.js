@@ -82,7 +82,7 @@ app.get("/", function (_request, response, _next) { return __awaiter(_this, void
 }); });
 // handle payment form request
 app.post("/pay", function (request, response, next) { return __awaiter(_this, void 0, void 0, function () {
-    var _a, address, amount, message, qrCodeParameters, qrCodePayload, callbackUrl, receivingAddress, error_1;
+    var _a, address, amount, message, qrCodeParameters, qrCodePayload, callbackUrl, qrCodeUrl, receivingAddress, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -93,6 +93,7 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
                 };
                 qrCodePayload = "bitcoin:" + address + "?" + querystring.stringify(qrCodeParameters);
                 callbackUrl = getAbsoluteUrl("/handle-payment");
+                qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify({ payload: qrCodePayload }));
                 _b.label = 1;
             case 1:
                 _b.trys.push([1, 3, , 4]);
@@ -106,6 +107,7 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
                     receivingAddress: receivingAddress,
                     qrCodeParameters: qrCodeParameters,
                     qrCodePayload: qrCodePayload,
+                    qrCodeUrl: qrCodeUrl,
                 });
                 return [3 /*break*/, 4];
             case 3:
@@ -114,6 +116,17 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
+    });
+}); });
+// handle qr image request
+app.get("/qr", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
+    var payload, image;
+    return __generator(this, function (_a) {
+        payload = request.query.payload;
+        image = src_1.Api.getQrImage(payload);
+        response.setHeader("Content-Type", "image/png");
+        image.pipe(response);
+        return [2 /*return*/];
     });
 }); });
 // handle payment update request

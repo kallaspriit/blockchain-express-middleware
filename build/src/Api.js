@@ -44,8 +44,26 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
+var qr = require("qr-image");
 var querystring = require("querystring");
-/* tslint:enable:no-any */
+// dummy log that does not do anything
+exports.dummyLog = {
+    info: function (_message) {
+        var _optionalParams = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            _optionalParams[_i - 1] = arguments[_i];
+        }
+        /* dummy */
+    },
+    error: function (_message) {
+        var _optionalParams = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            _optionalParams[_i - 1] = arguments[_i];
+        }
+        /* dummy */
+    },
+};
+/* tslint:enable:no-any prefer-function-over-method */
 /**
  * Default base configuration.
  */
@@ -70,10 +88,14 @@ var Api = /** @class */ (function () {
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
     function Api(userConfig, log) {
-        if (log === void 0) { log = console; }
+        if (log === void 0) { log = exports.dummyLog; }
         this.log = log;
         this.config = __assign({}, exports.defaultBaseConfig, userConfig);
     }
+    Api.getQrImage = function (text, options) {
+        if (options === void 0) { options = {}; }
+        return qr.image(text, __assign({ size: 4, type: "png" }, options));
+    };
     Api.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, apiBaseUrl, xPub, apiKey, gapLimit, parameters, url, response, error_1;
