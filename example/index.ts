@@ -137,7 +137,11 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
   }
 
   // build qr code url
-  const qrCodeParameters = { address: invoice.address, amount: invoice.amount, message: invoice.message };
+  const qrCodeParameters = {
+    address: invoice.address,
+    amount: satoshiToBitcoin(invoice.amount),
+    message: invoice.message,
+  };
   const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify(qrCodeParameters)}`);
 
   // show payment request info along with the qr code to scan
