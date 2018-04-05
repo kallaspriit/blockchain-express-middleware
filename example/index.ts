@@ -10,20 +10,40 @@ import * as querystring from "querystring";
 import * as uuid from "uuid";
 import { Api } from "../src";
 
+// invoice state
+enum InvoiceState {
+  // invoice has been created but no payment updates have been received
+  NEW = "NEW",
+
+  // at least one payment update has been received, waiting for required confirmations
+  WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
+  PAID = "PAID",
+  // x PAID_EXPIRED = "PAID_EXPIRED",
+  // x EXPIRED = "EXPIRED",
+  // x CANCELLED = "CANCELLED",
+  // x FAILED = "FAILED",
+}
+
+// TODO: add state in place of isConfirmed [PAID, INVALID, OVERPAID, UNDERPAID..]
 interface IInvoice {
   id: string;
-  amount: number;
+  amountDue: number;
+  amountPaid: number;
   message: string;
   confirmations: number;
-  isConfirmed: boolean; // TODO: refactor this to state [PAID, INVALID, OVERPAID, UNDERPAID..]
+  state: InvoiceState;
   address?: string;
   transactionHash?: string;
 }
 
 interface IInvoiceSignatureInfo {
   id: string;
-  amount: number;
+  amountDue: number;
   message: string;
+}
+
+interface IArrayMap<T> {
+  [x: string]: T[] | undefined;
 }
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
@@ -33,6 +53,7 @@ dotenv.config();
 const HTTP_PORT = 80;
 const DEFAULT_PORT = 3000;
 const BITCOIN_TO_SATOSHI = 100000000;
+const OK_RESPONSE = "*";
 
 // extract configuration from the .env environment variables
 const config = {
@@ -50,7 +71,7 @@ const config = {
   app: {
     secret: process.env.APP_SECRET !== undefined ? process.env.APP_SECRET : "",
     requiredConfirmations:
-      process.env.APP_REQUIRED_CONFIRMATIONS !== undefined ? parseInt(process.env.APP_REQUIRED_CONFIRMATIONS, 10) : "",
+      process.env.APP_REQUIRED_CONFIRMATIONS !== undefined ? parseInt(process.env.APP_REQUIRED_CONFIRMATIONS, 10) : 1,
   },
 };
 
@@ -96,10 +117,11 @@ app.post("/pay", async (request, response, next) => {
   const id = uuid.v4();
   const invoice: IInvoice = {
     id,
-    amount: bitcoinToSatoshi(amount),
+    amountDue: bitcoinToSatoshi(amount),
+    amountPaid: 0,
     message,
     confirmations: 0,
-    isConfirmed: false,
+    state: InvoiceState.NEW,
   };
 
   // store the invoice in memory (this would really be a database)
@@ -139,7 +161,7 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
   // build qr code url
   const qrCodeParameters = {
     address: invoice.address,
-    amount: satoshiToBitcoin(invoice.amount),
+    amount: satoshiToBitcoin(invoice.amountDue),
     message: invoice.message,
   };
   const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify(qrCodeParameters)}`);
@@ -150,10 +172,12 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
 
     <ul>
       <li><strong>Address:</strong> ${invoice.address}</li>
-      <li><strong>Amount:</strong> ${satoshiToBitcoin(invoice.amount)} BTC</li>
+      <li><strong>Amount paid:</strong> ${satoshiToBitcoin(invoice.amountPaid)}/${satoshiToBitcoin(
+    invoice.amountDue,
+  )} BTC</li>
       <li><strong>Message:</strong> ${invoice.message}</li>
       <li><strong>Confirmations:</strong> ${invoice.confirmations}</li>
-      <li><strong>Is paid:</strong> ${invoice.isConfirmed ? "yes" : "no"}</li>
+      <li><strong>State:</strong> ${invoice.state}</li>
     </ul>
 
     <p>
@@ -183,7 +207,15 @@ app.get("/handle-payment", async (request, response, _next) => {
 
   // give up if an invoice with given address could not be found
   if (!invoice) {
-    response.status(HttpStatus.NOT_FOUND).send("invoice not found");
+    console.log(
+      {
+        query: request.query,
+      },
+      "invoice could not be found",
+    );
+
+    // still send the OK response as we don't want any more updates on this invoice
+    response.send(OK_RESPONSE);
 
     return;
   }
@@ -193,15 +225,9 @@ app.get("/handle-payment", async (request, response, _next) => {
 
   // validate payment update
   const isSignatureValid = signature === expectedSignature;
-  const isAmountValid = invoice.amount === parseInt(value, 10);
   const isAddressValid = invoice.address === address;
-  const isUpdateValid = isSignatureValid && isAmountValid && isAddressValid;
-
-  // update invoice info if update is valid
-  if (isUpdateValid) {
-    invoice.confirmations = parseInt(confirmations, 10);
-    invoice.transactionHash = transactionHash;
-  }
+  const isHashValid = true; // TODO: actually validate hash
+  const isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
 
   console.log(
     {
@@ -209,21 +235,12 @@ app.get("/handle-payment", async (request, response, _next) => {
       info: { signature, address, transactionHash, value, confirmations },
       invoice,
       isSignatureValid,
-      isAmountValid,
       isAddressValid,
+      isHashValid,
       isUpdateValid,
     },
     "handle payment update",
   );
-
-  // check whether this was the first time that the invoice became confirmed
-  const wasConfirmed = invoice.isConfirmed;
-  invoice.isConfirmed = invoice.confirmations >= config.app.requiredConfirmations;
-
-  if (!wasConfirmed && invoice.isConfirmed) {
-    // invoice has been paid, ship out the products etc..
-    console.log(invoice, "invoice is now paid");
-  }
 
   // respond with bad request if update was not valid
   if (!isUpdateValid) {
@@ -232,8 +249,36 @@ app.get("/handle-payment", async (request, response, _next) => {
     return;
   }
 
-  // respond with *ok* if we have received sufficient confirmations (will not get new updates after this)
-  response.send(invoice.isConfirmed ? "*ok*" : "pending");
+  // update is valid, update invoice info
+  invoice.confirmations = parseInt(confirmations, 10);
+  invoice.amountPaid = parseInt(value, 10);
+  invoice.transactionHash = transactionHash;
+
+  // remember previous state and resolve new state
+  const previousState = invoice.state;
+  let newState = invoice.state;
+
+  // check for valid initial states
+  if ([InvoiceState.NEW, InvoiceState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
+    const hasSufficientConfirmations = invoice.confirmations >= config.app.requiredConfirmations;
+
+    newState = hasSufficientConfirmations ? InvoiceState.PAID : InvoiceState.WAITING_FOR_CONFIRMATION;
+  }
+
+  // make sure the state transitions is valid
+  if (isValidStateTransition(previousState, newState)) {
+    invoice.state = newState;
+  }
+
+  // check whether invoice was just paid
+  if (previousState !== InvoiceState.PAID && newState === InvoiceState.PAID) {
+    // ship out the products etc..
+    // TODO: call some handler
+    console.log(invoice, "invoice is now paid");
+  }
+
+  // respond with *ok* if we have reached a final state (will not get new updates after this)
+  response.send(isFinalState(invoice.state) ? OK_RESPONSE : "pending");
 });
 
 // create either http or https server depending on SSL configuration
@@ -275,7 +320,7 @@ function getAbsoluteUrl(path: string) {
 }
 
 function getInvoiceSignature(invoice: IInvoiceSignatureInfo, key: string) {
-  const tokens = [invoice.id, invoice.amount.toString(), invoice.message];
+  const tokens = [invoice.id, invoice.amountDue.toString(), invoice.message];
   const payload = tokens.join(":");
 
   return createHmac("sha512", key)
@@ -289,4 +334,36 @@ function satoshiToBitcoin(microValue: number): number {
 
 function bitcoinToSatoshi(floatValue: number): number {
   return Math.floor(floatValue * BITCOIN_TO_SATOSHI);
+}
+
+function isValidStateTransition(currentState: InvoiceState, newState: InvoiceState): boolean {
+  // allow not changing the state
+  if (currentState === newState) {
+    return true;
+  }
+
+  // map of current to possible new states
+  const validTransitionsMap: IArrayMap<InvoiceState> = {
+    [InvoiceState.NEW]: [InvoiceState.WAITING_FOR_CONFIRMATION, InvoiceState.PAID],
+    [InvoiceState.WAITING_FOR_CONFIRMATION]: [InvoiceState.PAID],
+    [InvoiceState.PAID]: [],
+  };
+
+  // valid transitions for current state
+  const validTransitions = validTransitionsMap[currentState];
+
+  // throw error if mapping is missing for some reason
+  /* istanbul ignore if */
+  if (!validTransitions) {
+    throw new Error(`Valid state transitions mapping for "${currentState}" is missing, this should not happen`);
+  }
+
+  // transition is valid if the new state is in the valid transitions list
+  return validTransitions.indexOf(newState) !== -1;
+}
+
+function isFinalState(state: InvoiceState) {
+  const finalStates: InvoiceState[] = [InvoiceState.PAID];
+
+  return finalStates.indexOf(state) !== -1;
 }
