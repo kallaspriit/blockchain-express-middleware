@@ -37,23 +37,27 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var bodyParser = require("body-parser");
+var crypto_1 = require("crypto");
 var dotenv = require("dotenv");
 var express = require("express");
 var fs = require("fs");
 var http = require("http");
+var HttpStatus = require("http-status-codes");
 var https = require("https");
 var querystring = require("querystring");
+var uuid = require("uuid");
 var src_1 = require("../src");
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
 // constants
 var HTTP_PORT = 80;
 var DEFAULT_PORT = 3000;
+var BITCOIN_TO_SATOSHI = 100000000;
 // extract configuration from the .env environment variables
 var config = {
     server: {
         host: process.env.SERVER_HOST !== undefined ? process.env.SERVER_HOST : "localhost",
-        port: process.env.SERVER_PORT !== undefined ? process.env.SERVER_PORT : DEFAULT_PORT,
+        port: process.env.SERVER_PORT !== undefined ? parseInt(process.env.SERVER_PORT, 10) : DEFAULT_PORT,
         useSSL: process.env.SERVER_USE_SSL === "true",
         cert: process.env.SERVER_CERT !== undefined ? process.env.SERVER_CERT : "",
         key: process.env.SERVER_KEY !== undefined ? process.env.SERVER_KEY : "",
@@ -63,9 +67,12 @@ var config = {
         xPub: process.env.API_XPUB !== undefined ? process.env.API_XPUB : "",
     },
     app: {
-        address: process.env.APP_ADDRESS !== undefined ? process.env.APP_ADDRESS : "",
+        secret: process.env.APP_SECRET !== undefined ? process.env.APP_SECRET : "",
+        requiredConfirmations: process.env.APP_REQUIRED_CONFIRMATIONS !== undefined ? parseInt(process.env.APP_REQUIRED_CONFIRMATIONS, 10) : "",
     },
 };
+// invoices "database"
+var invoices = [];
 // initiate api
 var api = new src_1.Api(config.api);
 // create the express server application
@@ -76,27 +83,40 @@ app.use(bodyParser.json());
 // handle index view request
 app.get("/", function (_request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
     return __generator(this, function (_a) {
-        response.send("\n    <h1>Request Bitcoin payment</h1>\n\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"address\" value=\"" + config.app.address + "\" /> Address\n      </p>\n      <p>\n        <input type=\"text\" name=\"amount\" value=\"0.001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n  ");
+        // show request payment form
+        response.send("\n    <h1>Request Bitcoin payment</h1>\n\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"amount\" value=\"0.0001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n  ");
         return [2 /*return*/];
     });
 }); });
 // handle payment form request
 app.post("/pay", function (request, response, next) { return __awaiter(_this, void 0, void 0, function () {
-    var _a, address, amount, message, callbackUrl, paymentRequest, qrCodeParameters, qrCodeUrl, error_1;
+    var _a, amount, message, id, invoice, signature, callbackUrl, receivingAddress, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
-                _a = request.body, address = _a.address, amount = _a.amount, message = _a.message;
-                callbackUrl = getAbsoluteUrl("/handle-payment");
+                _a = request.body, amount = _a.amount, message = _a.message;
+                id = uuid.v4();
+                invoice = {
+                    id: id,
+                    amount: bitcoinToSatoshi(amount),
+                    message: message,
+                    confirmations: 0,
+                    isConfirmed: false,
+                };
+                // store the invoice in memory (this would really be a database)
+                invoices.push(invoice);
+                signature = getInvoiceSignature(invoice, config.app.secret);
+                callbackUrl = getAbsoluteUrl("/handle-payment?" + querystring.stringify({ signature: signature }));
                 _b.label = 1;
             case 1:
                 _b.trys.push([1, 3, , 4]);
                 return [4 /*yield*/, api.generateReceivingAddress(callbackUrl)];
             case 2:
-                paymentRequest = _b.sent();
-                qrCodeParameters = { address: paymentRequest.address, amount: amount, message: message };
-                qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify(qrCodeParameters));
-                response.send("\n      <h1>Payment request</h1>\n\n      <ul>\n        <li><strong>Merchant address:</strong> " + address + "</li>\n        <li><strong>Receiving address:</strong> " + paymentRequest.address + "</li>\n        <li><strong>Amount:</strong> " + amount + "</li>\n        <li><strong>Message:</strong> " + message + "</li>\n      </ul>\n\n      <img src=\"" + qrCodeUrl + "\"/>\n    ");
+                receivingAddress = _b.sent();
+                // update invoice address
+                invoice.address = receivingAddress.address;
+                // redirect user to invoice view
+                response.redirect("/invoice/" + invoice.id);
                 return [3 /*break*/, 4];
             case 3:
                 error_1 = _b.sent();
@@ -104,6 +124,23 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
+    });
+}); });
+// handle invoice request
+app.get("/invoice/:invoiceId", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
+    var invoiceId, invoice, qrCodeParameters, qrCodeUrl;
+    return __generator(this, function (_a) {
+        invoiceId = request.params.invoiceId;
+        invoice = invoices.find(function (item) { return item.id === invoiceId; });
+        if (!invoice) {
+            response.status(HttpStatus.NOT_FOUND).send("Invoice could not be found");
+            return [2 /*return*/];
+        }
+        qrCodeParameters = { address: invoice.address, amount: invoice.amount, message: invoice.message };
+        qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify(qrCodeParameters));
+        // show payment request info along with the qr code to scan
+        response.send("\n    <h1>Invoice</h1>\n\n    <ul>\n      <li><strong>Address:</strong> " + invoice.address + "</li>\n      <li><strong>Amount:</strong> " + satoshiToBitcoin(invoice.amount) + " BTC</li>\n      <li><strong>Message:</strong> " + invoice.message + "</li>\n      <li><strong>Confirmations:</strong> " + invoice.confirmations + "</li>\n      <li><strong>Is paid:</strong> " + (invoice.isConfirmed ? "yes" : "no") + "</li>\n    </ul>\n\n    <p>\n      <img src=\"" + qrCodeUrl + "\"/>\n    </p>\n\n    <p>\n      <a href=\"" + getAbsoluteUrl("/invoice/" + invoiceId) + "\">Refresh this page</a> to check for updates.\n    </p>\n  ");
+        return [2 /*return*/];
     });
 }); });
 // handle qr image request
@@ -119,12 +156,47 @@ app.get("/qr", function (request, response, _next) { return __awaiter(_this, voi
 }); });
 // handle payment update request
 app.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-    return __generator(this, function (_a) {
+    var _a, signature, address, transactionHash, value, confirmations, invoice, expectedSignature, isSignatureValid, isAmountValid, isAddressValid, isUpdateValid, wasConfirmed;
+    return __generator(this, function (_b) {
+        _a = request.query, signature = _a.signature, address = _a.address, transactionHash = _a.transaction_hash, value = _a.value, confirmations = _a.confirmations;
+        invoice = invoices.find(function (item) { return item.address === address; });
+        // give up if an invoice with given address could not be found
+        if (!invoice) {
+            response.status(HttpStatus.NOT_FOUND).send("invoice not found");
+            return [2 /*return*/];
+        }
+        expectedSignature = getInvoiceSignature(invoice, config.app.secret);
+        isSignatureValid = signature === expectedSignature;
+        isAmountValid = invoice.amount === parseInt(value, 10);
+        isAddressValid = invoice.address === address;
+        isUpdateValid = isSignatureValid && isAmountValid && isAddressValid;
+        // update invoice info if update is valid
+        if (isUpdateValid) {
+            invoice.confirmations = parseInt(confirmations, 10);
+            invoice.transactionHash = transactionHash;
+        }
         console.log({
             query: request.query,
-            body: request.body,
-        }, "got handle payment update");
-        response.send("pending");
+            info: { signature: signature, address: address, transactionHash: transactionHash, value: value, confirmations: confirmations },
+            invoice: invoice,
+            isSignatureValid: isSignatureValid,
+            isAmountValid: isAmountValid,
+            isAddressValid: isAddressValid,
+            isUpdateValid: isUpdateValid,
+        }, "handle payment update");
+        wasConfirmed = invoice.isConfirmed;
+        invoice.isConfirmed = invoice.confirmations >= config.app.requiredConfirmations;
+        if (!wasConfirmed && invoice.isConfirmed) {
+            // invoice has been paid, ship out the products etc..
+            console.log(invoice, "invoice is now paid");
+        }
+        // respond with bad request if update was not valid
+        if (!isUpdateValid) {
+            response.status(HttpStatus.BAD_REQUEST).send("got invalid payment status update");
+            return [2 /*return*/];
+        }
+        // respond with *ok* if we have received sufficient confirmations (will not get new updates after this)
+        response.send(invoice.isConfirmed ? "*ok*" : "pending");
         return [2 /*return*/];
     });
 }); });
@@ -154,5 +226,18 @@ function getAbsoluteUrl(path) {
     var port = config.server.port === HTTP_PORT ? "" : ":" + config.server.port;
     var url = ("" + config.server.host + port + path).replace(/\/{2,}/g, "/");
     return (config.server.useSSL ? "https" : "http") + "://" + url;
+}
+function getInvoiceSignature(invoice, key) {
+    var tokens = [invoice.id, invoice.amount.toString(), invoice.message];
+    var payload = tokens.join(":");
+    return crypto_1.createHmac("sha512", key)
+        .update(payload)
+        .digest("hex");
+}
+function satoshiToBitcoin(microValue) {
+    return microValue / BITCOIN_TO_SATOSHI;
+}
+function bitcoinToSatoshi(floatValue) {
+    return Math.floor(floatValue * BITCOIN_TO_SATOSHI);
 }
 //# sourceMappingURL=index.js.map
