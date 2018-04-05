@@ -27,9 +27,6 @@ const config = {
     apiKey: process.env.API_KEY !== undefined ? process.env.API_KEY : "",
     xPub: process.env.API_XPUB !== undefined ? process.env.API_XPUB : "",
   },
-  app: {
-    address: process.env.APP_ADDRESS !== undefined ? process.env.APP_ADDRESS : "",
-  },
 };
 
 // initiate api
@@ -49,10 +46,7 @@ app.get("/", async (_request, response, _next) => {
 
     <form method="post" action="/pay">
       <p>
-        <input type="text" name="address" value="${config.app.address}" /> Address
-      </p>
-      <p>
-        <input type="text" name="amount" value="0.001" /> Amount (BTC)
+        <input type="text" name="amount" value="0.0001" /> Amount (BTC)
       </p>
       <p>
         <input type="text" name="message" value="Test payment" /> Message
@@ -66,7 +60,7 @@ app.get("/", async (_request, response, _next) => {
 
 // handle payment form request
 app.post("/pay", async (request, response, next) => {
-  const { address, amount, message } = request.body;
+  const { amount, message } = request.body;
   const callbackUrl = getAbsoluteUrl("/handle-payment");
 
   try {
@@ -78,8 +72,7 @@ app.post("/pay", async (request, response, next) => {
       <h1>Payment request</h1>
 
       <ul>
-        <li><strong>Merchant address:</strong> ${address}</li>
-        <li><strong>Receiving address:</strong> ${paymentRequest.address}</li>
+        <li><strong>Address:</strong> ${paymentRequest.address}</li>
         <li><strong>Amount:</strong> ${amount}</li>
         <li><strong>Message:</strong> ${message}</li>
       </ul>
@@ -102,9 +95,10 @@ app.get("/qr", async (request, response, _next) => {
 });
 
 // handle payment update request
-app.get("/handle-payment", async (request, response, _next) => {
+app.use("/handle-payment", async (request, response, _next) => {
   console.log(
     {
+      method: request.method,
       query: request.query,
       body: request.body,
     },
