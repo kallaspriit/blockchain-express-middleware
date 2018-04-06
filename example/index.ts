@@ -13,18 +13,27 @@ import { Api } from "../src";
 // invoice state
 enum InvoiceState {
   // invoice has been created but no payment updates have been received
-  NEW = "NEW",
+  PENDING = "PENDING",
 
-  // at least one payment update has been received, waiting for required confirmations
-  WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
+  // invoice has been paid but not yet confirmed, waiting for required confirmations
+  // note that it may have been under- or overpaid, check the amounts
   PAID = "PAID",
+
+  // invoice has been paid and received sufficient confirmations
+  // note that it may have been under- or overpaid, check the amounts
+  CONFIRMED = "CONFIRMED",
+
+  // x EXPIRED
+  // x PAID_EXPIRED
+
+  // TODO: handle expiry?
   // x PAID_EXPIRED = "PAID_EXPIRED",
   // x EXPIRED = "EXPIRED",
   // x CANCELLED = "CANCELLED",
   // x FAILED = "FAILED",
 }
 
-// TODO: add state in place of isConfirmed [PAID, INVALID, OVERPAID, UNDERPAID..]
+// TODO: refactor as class
 interface IInvoice {
   id: string;
   amountDue: number;
@@ -34,6 +43,9 @@ interface IInvoice {
   state: InvoiceState;
   address?: string;
   transactionHash?: string;
+  // TODO: created, updated, paid date
+  // TODO: expiry date?
+  // TODO: state transitions
 }
 
 interface IInvoiceSignatureInfo {
@@ -121,7 +133,7 @@ app.post("/pay", async (request, response, next) => {
     amountPaid: 0,
     message,
     confirmations: 0,
-    state: InvoiceState.NEW,
+    state: InvoiceState.PENDING,
   };
 
   // store the invoice in memory (this would really be a database)
@@ -229,21 +241,23 @@ app.get("/handle-payment", async (request, response, _next) => {
   const isHashValid = true; // TODO: actually validate hash
   const isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
 
-  console.log(
-    {
-      query: request.query,
-      info: { signature, address, transactionHash, value, confirmations },
-      invoice,
-      isSignatureValid,
-      isAddressValid,
-      isHashValid,
-      isUpdateValid,
-    },
-    "handle payment update",
-  );
-
   // respond with bad request if update was not valid
   if (!isUpdateValid) {
+    // log failing update info
+    console.warn(
+      {
+        query: request.query,
+        info: { signature, address, transactionHash, value, confirmations },
+        invoice,
+        isSignatureValid,
+        isAddressValid,
+        isHashValid,
+        isUpdateValid,
+      },
+      "got invalid payment update",
+    );
+
+    // respond with bad request
     response.status(HttpStatus.BAD_REQUEST).send("got invalid payment status update");
 
     return;
@@ -259,26 +273,53 @@ app.get("/handle-payment", async (request, response, _next) => {
   let newState = invoice.state;
 
   // check for valid initial states
-  if ([InvoiceState.NEW, InvoiceState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
+  if ([InvoiceState.PENDING, InvoiceState.PAID].indexOf(previousState) !== -1) {
     const hasSufficientConfirmations = invoice.confirmations >= config.app.requiredConfirmations;
 
-    newState = hasSufficientConfirmations ? InvoiceState.PAID : InvoiceState.WAITING_FOR_CONFIRMATION;
+    newState = hasSufficientConfirmations ? InvoiceState.CONFIRMED : InvoiceState.PAID;
   }
 
   // make sure the state transitions is valid
   if (isValidStateTransition(previousState, newState)) {
     invoice.state = newState;
+  } else {
+    console.warn(
+      {
+        previousState,
+        newState,
+      },
+      "resolved to invalid invoice state",
+    );
   }
 
   // check whether invoice was just paid
-  if (previousState !== InvoiceState.PAID && newState === InvoiceState.PAID) {
+  if (previousState !== InvoiceState.CONFIRMED && newState === InvoiceState.CONFIRMED) {
     // ship out the products etc..
     // TODO: call some handler
     console.log(invoice, "invoice is now paid");
   }
 
+  // check whether handling given invoice is complete and respond accordingly
+  const isComplete = isFinalState(invoice.state);
+  const responseText = isComplete ? OK_RESPONSE : invoice.state;
+
+  // log the request info
+  console.log(
+    {
+      query: request.query,
+      info: { signature, address, transactionHash, value, confirmations },
+      invoice,
+      isSignatureValid,
+      isAddressValid,
+      isHashValid,
+      isUpdateValid,
+      isComplete,
+    },
+    "got valid payment update",
+  );
+
   // respond with *ok* if we have reached a final state (will not get new updates after this)
-  response.send(isFinalState(invoice.state) ? OK_RESPONSE : "pending");
+  response.send(responseText);
 });
 
 // create either http or https server depending on SSL configuration
@@ -344,9 +385,9 @@ function isValidStateTransition(currentState: InvoiceState, newState: InvoiceSta
 
   // map of current to possible new states
   const validTransitionsMap: IArrayMap<InvoiceState> = {
-    [InvoiceState.NEW]: [InvoiceState.WAITING_FOR_CONFIRMATION, InvoiceState.PAID],
-    [InvoiceState.WAITING_FOR_CONFIRMATION]: [InvoiceState.PAID],
-    [InvoiceState.PAID]: [],
+    [InvoiceState.PENDING]: [InvoiceState.PAID, InvoiceState.CONFIRMED],
+    [InvoiceState.PAID]: [InvoiceState.CONFIRMED],
+    [InvoiceState.CONFIRMED]: [],
   };
 
   // valid transitions for current state
@@ -363,7 +404,7 @@ function isValidStateTransition(currentState: InvoiceState, newState: InvoiceSta
 }
 
 function isFinalState(state: InvoiceState) {
-  const finalStates: InvoiceState[] = [InvoiceState.PAID];
+  const finalStates: InvoiceState[] = [InvoiceState.CONFIRMED];
 
   return finalStates.indexOf(state) !== -1;
 }
