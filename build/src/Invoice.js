@@ -70,6 +70,7 @@ var Invoice = /** @class */ (function () {
     Invoice.prototype.registerTransaction = function (transaction) {
         // attempt to find existing transaction with the same hash
         var existingTransaction = this.transactions.find(function (item) { return item.hash === transaction.hash; });
+        // update existing transaction if it exists
         if (existingTransaction !== undefined) {
             // make sure the amount is the same
             if (existingTransaction.amount !== transaction.amount) {
@@ -78,6 +79,8 @@ var Invoice = /** @class */ (function () {
             // update existing transaction
             existingTransaction.confirmations = transaction.confirmations;
         }
+        // add a new transaction
+        this.transactions.push(transaction);
     };
     Invoice.prototype.getPaidAmount = function () {
         return this.transactions.reduce(function (paidAmount, transaction) { return paidAmount + transaction.amount; }, 0);
@@ -92,6 +95,10 @@ var Invoice = /** @class */ (function () {
         return Invoice.isCompleteState(this.state);
     };
     Invoice.prototype.hasSufficientConfirmations = function (requiredConfirmationCount) {
+        // we need at least one transaction to be confirmed
+        if (this.transactions.length === 0) {
+            return false;
+        }
         // if any of the transactions have less than required confirmations then return false
         for (var _i = 0, _a = this.transactions; _i < _a.length; _i++) {
             var transaction = _a[_i];

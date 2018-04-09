@@ -137,7 +137,7 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
       <li><strong>Message:</strong> ${invoice.message}</li>
       <li><strong>State:</strong> ${invoice.state}</li>
       <li>
-        Transactions:
+      <strong>Transactions:</strong>
         ${invoice.transactions.map(
           transaction => `
             <ul>

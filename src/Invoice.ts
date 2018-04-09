@@ -103,6 +103,7 @@ export default class Invoice {
     // attempt to find existing transaction with the same hash
     const existingTransaction = this.transactions.find(item => item.hash === transaction.hash);
 
+    // update existing transaction if it exists
     if (existingTransaction !== undefined) {
       // make sure the amount is the same
       if (existingTransaction.amount !== transaction.amount) {
@@ -116,6 +117,9 @@ export default class Invoice {
       // update existing transaction
       existingTransaction.confirmations = transaction.confirmations;
     }
+
+    // add a new transaction
+    this.transactions.push(transaction);
   }
 
   public getPaidAmount(): number {
@@ -135,6 +139,11 @@ export default class Invoice {
   }
 
   public hasSufficientConfirmations(requiredConfirmationCount: number) {
+    // we need at least one transaction to be confirmed
+    if (this.transactions.length === 0) {
+      return false;
+    }
+
     // if any of the transactions have less than required confirmations then return false
     for (const transaction of this.transactions) {
       if (transaction.confirmations < requiredConfirmationCount) {
