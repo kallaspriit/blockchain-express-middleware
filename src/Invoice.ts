@@ -16,14 +16,14 @@ interface IArrayMap<T> {
   [x: string]: T[] | undefined;
 }
 
-// invoice state
-export enum InvoiceState {
+// invoice payment state
+export enum InvoicePaymentState {
   // invoice has been created but no payment updates have been received
   PENDING = "PENDING",
 
   // invoice has been paid but not yet confirmed, waiting for required confirmations
   // note that it may have been under- or overpaid, check the amounts
-  PAID = "PAID",
+  WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
 
   // invoice has been paid and received sufficient confirmations
   // note that it may have been under- or overpaid, check the amounts
@@ -39,6 +39,13 @@ export enum InvoiceState {
   // x FAILED = "FAILED",
 }
 
+// invoice amount state
+export enum InvoiceAmountState {
+  EXACT = "EXACT",
+  OVERPAID = "OVERPAID",
+  UNDERPAID = "UNDERPAID",
+}
+
 export default class Invoice {
   public id: string;
   public dueAmount: number;
@@ -46,7 +53,7 @@ export default class Invoice {
   public address?: string;
   // public amountPaid = 0;
   // public confirmations = 0;
-  public state = InvoiceState.PENDING;
+  public state = InvoicePaymentState.PENDING;
   public transactions: ITransaction[] = [];
 
   public constructor({ id, dueAmount, message }: Pick<Invoice, "id" | "dueAmount" | "message">) {
@@ -67,17 +74,20 @@ export default class Invoice {
       .digest("hex");
   }
 
-  public static isValidInvoiceStateTransition(currentState: InvoiceState, newState: InvoiceState): boolean {
+  public static isValidInvoiceStateTransition(
+    currentState: InvoicePaymentState,
+    newState: InvoicePaymentState,
+  ): boolean {
     // allow not changing the state
     if (currentState === newState) {
       return true;
     }
 
     // map of current to possible new states
-    const validTransitionsMap: IArrayMap<InvoiceState> = {
-      [InvoiceState.PENDING]: [InvoiceState.PAID, InvoiceState.CONFIRMED],
-      [InvoiceState.PAID]: [InvoiceState.CONFIRMED],
-      [InvoiceState.CONFIRMED]: [],
+    const validTransitionsMap: IArrayMap<InvoicePaymentState> = {
+      [InvoicePaymentState.PENDING]: [InvoicePaymentState.WAITING_FOR_CONFIRMATION, InvoicePaymentState.CONFIRMED],
+      [InvoicePaymentState.WAITING_FOR_CONFIRMATION]: [InvoicePaymentState.CONFIRMED],
+      [InvoicePaymentState.CONFIRMED]: [],
     };
 
     // valid transitions for current state
@@ -93,8 +103,8 @@ export default class Invoice {
     return validTransitions.indexOf(newState) !== -1;
   }
 
-  public static isCompleteState(state: InvoiceState) {
-    const completeStates: InvoiceState[] = [InvoiceState.CONFIRMED];
+  public static isCompleteState(state: InvoicePaymentState) {
+    const completeStates: InvoicePaymentState[] = [InvoicePaymentState.CONFIRMED];
 
     return completeStates.indexOf(state) !== -1;
   }
@@ -126,11 +136,24 @@ export default class Invoice {
     return this.transactions.reduce((paidAmount, transaction) => paidAmount + transaction.amount, 0);
   }
 
+  public getAmountState(): InvoiceAmountState {
+    const paidAmount = this.getPaidAmount();
+    const dueAmount = this.dueAmount;
+
+    if (paidAmount > dueAmount) {
+      return InvoiceAmountState.OVERPAID;
+    } else if (paidAmount < dueAmount) {
+      return InvoiceAmountState.UNDERPAID;
+    }
+
+    return InvoiceAmountState.EXACT;
+  }
+
   public getSignature(key: string) {
     return Invoice.getInvoiceSignature(this, key);
   }
 
-  public isValidStateTransition(newState: InvoiceState): boolean {
+  public isValidStateTransition(newState: InvoicePaymentState): boolean {
     return Invoice.isValidInvoiceStateTransition(this.state, newState);
   }
 

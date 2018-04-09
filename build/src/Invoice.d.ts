@@ -8,26 +8,32 @@ export interface ITransaction {
     amount: number;
     confirmations: number;
 }
-export declare enum InvoiceState {
+export declare enum InvoicePaymentState {
     PENDING = "PENDING",
-    PAID = "PAID",
+    WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
     CONFIRMED = "CONFIRMED",
+}
+export declare enum InvoiceAmountState {
+    EXACT = "EXACT",
+    OVERPAID = "OVERPAID",
+    UNDERPAID = "UNDERPAID",
 }
 export default class Invoice {
     id: string;
     dueAmount: number;
     message: string;
     address?: string;
-    state: InvoiceState;
+    state: InvoicePaymentState;
     transactions: ITransaction[];
     constructor({id, dueAmount, message}: Pick<Invoice, "id" | "dueAmount" | "message">);
     static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string): string;
-    static isValidInvoiceStateTransition(currentState: InvoiceState, newState: InvoiceState): boolean;
-    static isCompleteState(state: InvoiceState): boolean;
+    static isValidInvoiceStateTransition(currentState: InvoicePaymentState, newState: InvoicePaymentState): boolean;
+    static isCompleteState(state: InvoicePaymentState): boolean;
     registerTransaction(transaction: ITransaction): void;
     getPaidAmount(): number;
+    getAmountState(): InvoiceAmountState;
     getSignature(key: string): string;
-    isValidStateTransition(newState: InvoiceState): boolean;
+    isValidStateTransition(newState: InvoicePaymentState): boolean;
     isComplete(): boolean;
     hasSufficientConfirmations(requiredConfirmationCount: number): boolean;
 }

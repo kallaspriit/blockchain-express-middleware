@@ -1,17 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var crypto_1 = require("crypto");
-// invoice state
-var InvoiceState;
-(function (InvoiceState) {
+// invoice payment state
+var InvoicePaymentState;
+(function (InvoicePaymentState) {
     // invoice has been created but no payment updates have been received
-    InvoiceState["PENDING"] = "PENDING";
+    InvoicePaymentState["PENDING"] = "PENDING";
     // invoice has been paid but not yet confirmed, waiting for required confirmations
     // note that it may have been under- or overpaid, check the amounts
-    InvoiceState["PAID"] = "PAID";
+    InvoicePaymentState["WAITING_FOR_CONFIRMATION"] = "WAITING_FOR_CONFIRMATION";
     // invoice has been paid and received sufficient confirmations
     // note that it may have been under- or overpaid, check the amounts
-    InvoiceState["CONFIRMED"] = "CONFIRMED";
+    InvoicePaymentState["CONFIRMED"] = "CONFIRMED";
     // x EXPIRED
     // x PAID_EXPIRED
     // TODO: handle expiry?
@@ -19,13 +19,20 @@ var InvoiceState;
     // x EXPIRED = "EXPIRED",
     // x CANCELLED = "CANCELLED",
     // x FAILED = "FAILED",
-})(InvoiceState = exports.InvoiceState || (exports.InvoiceState = {}));
+})(InvoicePaymentState = exports.InvoicePaymentState || (exports.InvoicePaymentState = {}));
+// invoice amount state
+var InvoiceAmountState;
+(function (InvoiceAmountState) {
+    InvoiceAmountState["EXACT"] = "EXACT";
+    InvoiceAmountState["OVERPAID"] = "OVERPAID";
+    InvoiceAmountState["UNDERPAID"] = "UNDERPAID";
+})(InvoiceAmountState = exports.InvoiceAmountState || (exports.InvoiceAmountState = {}));
 var Invoice = /** @class */ (function () {
     function Invoice(_a) {
         var id = _a.id, dueAmount = _a.dueAmount, message = _a.message;
         // public amountPaid = 0;
         // public confirmations = 0;
-        this.state = InvoiceState.PENDING;
+        this.state = InvoicePaymentState.PENDING;
         this.transactions = [];
         this.id = id;
         this.dueAmount = dueAmount;
@@ -48,9 +55,9 @@ var Invoice = /** @class */ (function () {
         }
         // map of current to possible new states
         var validTransitionsMap = (_a = {},
-            _a[InvoiceState.PENDING] = [InvoiceState.PAID, InvoiceState.CONFIRMED],
-            _a[InvoiceState.PAID] = [InvoiceState.CONFIRMED],
-            _a[InvoiceState.CONFIRMED] = [],
+            _a[InvoicePaymentState.PENDING] = [InvoicePaymentState.WAITING_FOR_CONFIRMATION, InvoicePaymentState.CONFIRMED],
+            _a[InvoicePaymentState.WAITING_FOR_CONFIRMATION] = [InvoicePaymentState.CONFIRMED],
+            _a[InvoicePaymentState.CONFIRMED] = [],
             _a);
         // valid transitions for current state
         var validTransitions = validTransitionsMap[currentState];
@@ -64,7 +71,7 @@ var Invoice = /** @class */ (function () {
         var _a;
     };
     Invoice.isCompleteState = function (state) {
-        var completeStates = [InvoiceState.CONFIRMED];
+        var completeStates = [InvoicePaymentState.CONFIRMED];
         return completeStates.indexOf(state) !== -1;
     };
     Invoice.prototype.registerTransaction = function (transaction) {
@@ -84,6 +91,17 @@ var Invoice = /** @class */ (function () {
     };
     Invoice.prototype.getPaidAmount = function () {
         return this.transactions.reduce(function (paidAmount, transaction) { return paidAmount + transaction.amount; }, 0);
+    };
+    Invoice.prototype.getAmountState = function () {
+        var paidAmount = this.getPaidAmount();
+        var dueAmount = this.dueAmount;
+        if (paidAmount > dueAmount) {
+            return InvoiceAmountState.OVERPAID;
+        }
+        else if (paidAmount < dueAmount) {
+            return InvoiceAmountState.UNDERPAID;
+        }
+        return InvoiceAmountState.EXACT;
     };
     Invoice.prototype.getSignature = function (key) {
         return Invoice.getInvoiceSignature(this, key);

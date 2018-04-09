@@ -7,7 +7,7 @@ import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
 import * as uuid from "uuid";
-import { Api, Invoice, InvoiceState } from "../src";
+import { Api, Invoice, InvoicePaymentState } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -133,20 +133,25 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
       <li><strong>Address:</strong> ${invoice.address}</li>
       <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
     invoice.dueAmount,
-  )} BTC</li>
+  )} BTC (${invoice.getAmountState()})</li>
       <li><strong>Message:</strong> ${invoice.message}</li>
       <li><strong>State:</strong> ${invoice.state}</li>
       <li>
-      <strong>Transactions:</strong>
-        ${invoice.transactions.map(
-          transaction => `
-            <ul>
-              <li><strong>Hash:</strong> ${transaction.hash}</li>
-              <li><strong>Amount:</strong> ${transaction.amount}</li>
-              <li><strong>Confirmations:</strong> ${transaction.confirmations}</li>
-            </ul>
-        `,
-        )}
+        <strong>Transactions:</strong>
+        <ul>
+          ${invoice.transactions.map(
+            (transaction, index) => `
+              <li>
+                <strong>Transaction #${index + 1}</strong>
+                <ul>
+                  <li><strong>Hash:</strong> ${transaction.hash}</li>
+                  <li><strong>Amount:</strong> ${Api.satoshiToBitcoin(transaction.amount)} BTC</li>
+                  <li><strong>Confirmations:</strong> ${transaction.confirmations}</li>
+                </ul>
+              </li>
+          `,
+          )}
+        </ul>
       </li>
     </ul>
 
@@ -239,10 +244,12 @@ app.get("/handle-payment", async (request, response, _next) => {
   let newState = invoice.state;
 
   // check for valid initial states to transition to paid or confirmed state
-  if ([InvoiceState.PENDING, InvoiceState.PAID].indexOf(previousState) !== -1) {
+  if ([InvoicePaymentState.PENDING, InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
     const hasSufficientConfirmations = invoice.hasSufficientConfirmations(config.app.requiredConfirmations);
 
-    newState = hasSufficientConfirmations ? InvoiceState.CONFIRMED : InvoiceState.PAID;
+    newState = hasSufficientConfirmations
+      ? InvoicePaymentState.CONFIRMED
+      : InvoicePaymentState.WAITING_FOR_CONFIRMATION;
   }
 
   // make sure the state transitions is valid
@@ -259,7 +266,7 @@ app.get("/handle-payment", async (request, response, _next) => {
   }
 
   // check whether invoice was just paid
-  if (previousState !== InvoiceState.CONFIRMED && newState === InvoiceState.CONFIRMED) {
+  if (previousState !== InvoicePaymentState.CONFIRMED && newState === InvoicePaymentState.CONFIRMED) {
     // ship out the products etc..
     // TODO: call some handler
     console.log(invoice, "invoice is now confirmed");
