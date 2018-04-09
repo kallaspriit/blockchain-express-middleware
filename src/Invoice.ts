@@ -126,9 +126,11 @@ export default class Invoice {
 
       // update existing transaction
       existingTransaction.confirmations = transaction.confirmations;
+
+      return;
     }
 
-    // add a new transaction
+    // transaction does not exist, add a new one
     this.transactions.push(transaction);
   }
 
