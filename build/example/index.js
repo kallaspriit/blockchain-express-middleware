@@ -52,6 +52,7 @@ dotenv.config();
 var HTTP_PORT = 80;
 var DEFAULT_PORT = 3000;
 var OK_RESPONSE = "*ok*";
+var PENDING_RESPONSE = "pending"; // actual value not important
 // extract configuration from the .env environment variables
 var config = {
     server: {
@@ -140,11 +141,12 @@ app.get("/invoice/:invoiceId", function (request, response, _next) { return __aw
         };
         qrCodeUrl = getAbsoluteUrl("/qr?" + querystring.stringify(qrCodeParameters));
         // show payment request info along with the qr code to scan
-        response.send("\n    <h1>Invoice</h1>\n\n    <ul>\n      <li><strong>Address:</strong> " + invoice.address + "</li>\n      <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n      <li><strong>Message:</strong> " + invoice.message + "</li>\n      <li><strong>State:</strong> " + invoice.state + "</li>\n      <li>\n        <strong>Transactions:</strong>\n        <ul>\n          " + invoice.transactions.map(function (transaction, index) { return "\n              <li>\n                <strong>Transaction #" + (index + 1) + "</strong>\n                <ul>\n                  <li><strong>Hash:</strong> " + transaction.hash + "</li>\n                  <li><strong>Amount:</strong> " + src_1.Api.satoshiToBitcoin(transaction.amount) + " BTC</li>\n                  <li><strong>Confirmations:</strong> " + transaction.confirmations + "</li>\n                </ul>\n              </li>\n          "; }) + "\n        </ul>\n      </li>\n    </ul>\n\n    <p>\n      <img src=\"" + qrCodeUrl + "\"/>\n    </p>\n\n    <p>\n      <a href=\"" + getAbsoluteUrl("/invoice/" + invoiceId) + "\">Refresh this page</a> to check for updates.\n    </p>\n  ");
+        response.send("\n    <h1>Invoice</h1>\n\n    <ul>\n      <li><strong>Address:</strong> " + invoice.address + "</li>\n      <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n      <li><strong>Message:</strong> " + invoice.message + "</li>\n      <li><strong>Confirmations:</strong> " + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + "</li>\n      <li><strong>State:</strong> " + invoice.getPaymentState() + "</li>\n      <li><strong>Is complete:</strong> " + (invoice.isComplete() ? "yes" : "no") + "</li>\n      <li>\n        <strong>Transactions:</strong>\n        <ul>\n          " + invoice.transactions.map(function (transaction, index) { return "\n              <li>\n                <strong>Transaction #" + (index + 1) + "</strong>\n                <ul>\n                  <li><strong>Hash:</strong> " + transaction.hash + "</li>\n                  <li><strong>Amount:</strong> " + src_1.Api.satoshiToBitcoin(transaction.amount) + " BTC</li>\n                  <li><strong>Confirmations:</strong> " + transaction.confirmations + "</li>\n                  <li><strong>Created:</strong> " + transaction.createdDate.toISOString() + "</li>\n                  <li><strong>Updated:</strong> " + transaction.updatedDate.toISOString() + "</li>\n                </ul>\n              </li>\n          "; }) + "\n        </ul>\n      </li>\n    </ul>\n\n    <p>\n      <img src=\"" + qrCodeUrl + "\"/>\n    </p>\n\n    <p>\n      <a href=\"" + getAbsoluteUrl("/invoice/" + invoiceId) + "\">Refresh this page</a> to check for updates.\n    </p>\n  ");
         return [2 /*return*/];
     });
 }); });
 // handle qr image request
+// TODO: refactor to middleware
 app.get("/qr", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
     var _a, address, amount, message, paymentRequestQrCode;
     return __generator(this, function (_b) {
@@ -156,6 +158,7 @@ app.get("/qr", function (request, response, _next) { return __awaiter(_this, voi
     });
 }); });
 // handle payment update request
+// TODO: refactor to middleware
 app.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
     var _a, signature, address, transactionHash, value, confirmations, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
     return __generator(this, function (_b) {
@@ -201,9 +204,11 @@ app.get("/handle-payment", function (request, response, _next) { return __awaite
             hash: transactionHash,
             amount: parseInt(value, 10),
             confirmations: parseInt(confirmations, 10),
+            createdDate: new Date(),
+            updatedDate: new Date(),
         });
-        previousState = invoice.state;
-        newState = invoice.state;
+        previousState = invoice.getPaymentState();
+        newState = previousState;
         // check for valid initial states to transition to paid or confirmed state
         if ([src_1.InvoicePaymentState.PENDING, src_1.InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
             hasSufficientConfirmations = invoice.hasSufficientConfirmations(config.app.requiredConfirmations);
@@ -211,16 +216,8 @@ app.get("/handle-payment", function (request, response, _next) { return __awaite
                 ? src_1.InvoicePaymentState.CONFIRMED
                 : src_1.InvoicePaymentState.WAITING_FOR_CONFIRMATION;
         }
-        // make sure the state transitions is valid
-        if (invoice.isValidStateTransition(newState)) {
-            invoice.state = newState;
-        }
-        else {
-            console.warn({
-                previousState: previousState,
-                newState: newState,
-            }, "resolved to invalid invoice state");
-        }
+        // update invoice payment state
+        invoice.setPaymentState(newState);
         // check whether invoice was just paid
         if (previousState !== src_1.InvoicePaymentState.CONFIRMED && newState === src_1.InvoicePaymentState.CONFIRMED) {
             // ship out the products etc..
@@ -228,7 +225,7 @@ app.get("/handle-payment", function (request, response, _next) { return __awaite
             console.log(invoice, "invoice is now confirmed");
         }
         isComplete = invoice.isComplete();
-        responseText = isComplete ? OK_RESPONSE : invoice.state;
+        responseText = isComplete ? OK_RESPONSE : PENDING_RESPONSE;
         // log the request info
         console.log({
             query: request.query,

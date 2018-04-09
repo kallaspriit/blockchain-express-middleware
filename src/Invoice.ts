@@ -10,6 +10,8 @@ export interface ITransaction {
   hash: string;
   amount: number;
   confirmations: number;
+  createdDate: Date;
+  updatedDate: Date;
 }
 
 interface IArrayMap<T> {
@@ -53,13 +55,17 @@ export default class Invoice {
   public address?: string;
   // public amountPaid = 0;
   // public confirmations = 0;
-  public state = InvoicePaymentState.PENDING;
   public transactions: ITransaction[] = [];
+  public createdDate: Date;
+  public updatedDate: Date;
+  private state = InvoicePaymentState.PENDING;
 
   public constructor({ id, dueAmount, message }: Pick<Invoice, "id" | "dueAmount" | "message">) {
     this.id = id;
     this.dueAmount = dueAmount;
     this.message = message;
+    this.createdDate = new Date();
+    this.updatedDate = new Date();
   }
   // TODO: created, updated, paid date
   // TODO: expiry date?
@@ -110,6 +116,9 @@ export default class Invoice {
   }
 
   public registerTransaction(transaction: ITransaction) {
+    // update updated date
+    this.updatedDate = new Date();
+
     // attempt to find existing transaction with the same hash
     const existingTransaction = this.transactions.find(item => item.hash === transaction.hash);
 
@@ -126,6 +135,7 @@ export default class Invoice {
 
       // update existing transaction
       existingTransaction.confirmations = transaction.confirmations;
+      existingTransaction.updatedDate = new Date();
 
       return;
     }
@@ -151,6 +161,26 @@ export default class Invoice {
     return InvoiceAmountState.EXACT;
   }
 
+  public getPaymentState(): InvoicePaymentState {
+    return this.state;
+  }
+
+  public setPaymentState(newState: InvoicePaymentState) {
+    // ignore no state change
+    if (newState === this.state) {
+      return;
+    }
+
+    // throw error if invalid state transition is requested
+    if (!this.isValidStateTransition(newState)) {
+      throw new Error(`Invalid state transition from "${this.state}" to "${newState}"`);
+    }
+
+    // update the invoice payment state
+    this.state = newState;
+    this.updatedDate = new Date();
+  }
+
   public getSignature(key: string) {
     return Invoice.getInvoiceSignature(this, key);
   }
@@ -163,20 +193,26 @@ export default class Invoice {
     return Invoice.isCompleteState(this.state);
   }
 
-  public hasSufficientConfirmations(requiredConfirmationCount: number) {
-    // we need at least one transaction to be confirmed
+  public getConfirmationCount(): number {
+    // consider lack of transactions as zero confirmations
     if (this.transactions.length === 0) {
-      return false;
+      return 0;
     }
 
-    // if any of the transactions have less than required confirmations then return false
+    // start at positive infinity
+    let minimumConfirmationCount = Infinity;
+
+    // find the minimum confirmation count
     for (const transaction of this.transactions) {
-      if (transaction.confirmations < requiredConfirmationCount) {
-        return false;
+      if (transaction.confirmations < minimumConfirmationCount) {
+        minimumConfirmationCount = transaction.confirmations;
       }
     }
 
-    // all transactions have sufficient confirmations
-    return true;
+    return minimumConfirmationCount;
+  }
+
+  public hasSufficientConfirmations(requiredConfirmationCount: number) {
+    return this.getConfirmationCount() >= requiredConfirmationCount;
   }
 }

@@ -16,6 +16,7 @@ dotenv.config();
 const HTTP_PORT = 80;
 const DEFAULT_PORT = 3000;
 const OK_RESPONSE = "*ok*";
+const PENDING_RESPONSE = "pending"; // actual value not important
 
 // extract configuration from the .env environment variables
 const config = {
@@ -135,7 +136,9 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
     invoice.dueAmount,
   )} BTC (${invoice.getAmountState()})</li>
       <li><strong>Message:</strong> ${invoice.message}</li>
-      <li><strong>State:</strong> ${invoice.state}</li>
+      <li><strong>Confirmations:</strong> ${invoice.getConfirmationCount()}/${config.app.requiredConfirmations}</li>
+      <li><strong>State:</strong> ${invoice.getPaymentState()}</li>
+      <li><strong>Is complete:</strong> ${invoice.isComplete() ? "yes" : "no"}</li>
       <li>
         <strong>Transactions:</strong>
         <ul>
@@ -147,6 +150,8 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
                   <li><strong>Hash:</strong> ${transaction.hash}</li>
                   <li><strong>Amount:</strong> ${Api.satoshiToBitcoin(transaction.amount)} BTC</li>
                   <li><strong>Confirmations:</strong> ${transaction.confirmations}</li>
+                  <li><strong>Created:</strong> ${transaction.createdDate.toISOString()}</li>
+                  <li><strong>Updated:</strong> ${transaction.updatedDate.toISOString()}</li>
                 </ul>
               </li>
           `,
@@ -166,6 +171,7 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
 });
 
 // handle qr image request
+// TODO: refactor to middleware
 app.get("/qr", async (request, response, _next) => {
   const { address, amount, message } = request.query;
 
@@ -176,6 +182,7 @@ app.get("/qr", async (request, response, _next) => {
 });
 
 // handle payment update request
+// TODO: refactor to middleware
 app.get("/handle-payment", async (request, response, _next) => {
   const { signature, address, transaction_hash: transactionHash, value, confirmations } = request.query;
   const invoice = invoices.find(item => item.address === address);
@@ -237,11 +244,13 @@ app.get("/handle-payment", async (request, response, _next) => {
     hash: transactionHash,
     amount: parseInt(value, 10),
     confirmations: parseInt(confirmations, 10),
+    createdDate: new Date(),
+    updatedDate: new Date(),
   });
 
   // remember previous state and resolve new state
-  const previousState = invoice.state;
-  let newState = invoice.state;
+  const previousState = invoice.getPaymentState();
+  let newState = previousState;
 
   // check for valid initial states to transition to paid or confirmed state
   if ([InvoicePaymentState.PENDING, InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
@@ -252,18 +261,8 @@ app.get("/handle-payment", async (request, response, _next) => {
       : InvoicePaymentState.WAITING_FOR_CONFIRMATION;
   }
 
-  // make sure the state transitions is valid
-  if (invoice.isValidStateTransition(newState)) {
-    invoice.state = newState;
-  } else {
-    console.warn(
-      {
-        previousState,
-        newState,
-      },
-      "resolved to invalid invoice state",
-    );
-  }
+  // update invoice payment state
+  invoice.setPaymentState(newState);
 
   // check whether invoice was just paid
   if (previousState !== InvoicePaymentState.CONFIRMED && newState === InvoicePaymentState.CONFIRMED) {
@@ -274,7 +273,7 @@ app.get("/handle-payment", async (request, response, _next) => {
 
   // check whether handling given invoice is complete and respond accordingly
   const isComplete = invoice.isComplete();
-  const responseText = isComplete ? OK_RESPONSE : invoice.state;
+  const responseText = isComplete ? OK_RESPONSE : PENDING_RESPONSE;
 
   // log the request info
   console.log(

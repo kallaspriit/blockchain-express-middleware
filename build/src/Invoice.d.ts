@@ -7,6 +7,8 @@ export interface ITransaction {
     hash: string;
     amount: number;
     confirmations: number;
+    createdDate: Date;
+    updatedDate: Date;
 }
 export declare enum InvoicePaymentState {
     PENDING = "PENDING",
@@ -23,8 +25,10 @@ export default class Invoice {
     dueAmount: number;
     message: string;
     address?: string;
-    state: InvoicePaymentState;
     transactions: ITransaction[];
+    createdDate: Date;
+    updatedDate: Date;
+    private state;
     constructor({id, dueAmount, message}: Pick<Invoice, "id" | "dueAmount" | "message">);
     static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string): string;
     static isValidInvoiceStateTransition(currentState: InvoicePaymentState, newState: InvoicePaymentState): boolean;
@@ -32,8 +36,11 @@ export default class Invoice {
     registerTransaction(transaction: ITransaction): void;
     getPaidAmount(): number;
     getAmountState(): InvoiceAmountState;
+    getPaymentState(): InvoicePaymentState;
+    setPaymentState(newState: InvoicePaymentState): void;
     getSignature(key: string): string;
     isValidStateTransition(newState: InvoicePaymentState): boolean;
     isComplete(): boolean;
+    getConfirmationCount(): number;
     hasSufficientConfirmations(requiredConfirmationCount: number): boolean;
 }

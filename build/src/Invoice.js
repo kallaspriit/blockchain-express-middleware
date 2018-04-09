@@ -32,11 +32,13 @@ var Invoice = /** @class */ (function () {
         var id = _a.id, dueAmount = _a.dueAmount, message = _a.message;
         // public amountPaid = 0;
         // public confirmations = 0;
-        this.state = InvoicePaymentState.PENDING;
         this.transactions = [];
+        this.state = InvoicePaymentState.PENDING;
         this.id = id;
         this.dueAmount = dueAmount;
         this.message = message;
+        this.createdDate = new Date();
+        this.updatedDate = new Date();
     }
     // TODO: created, updated, paid date
     // TODO: expiry date?
@@ -75,6 +77,8 @@ var Invoice = /** @class */ (function () {
         return completeStates.indexOf(state) !== -1;
     };
     Invoice.prototype.registerTransaction = function (transaction) {
+        // update updated date
+        this.updatedDate = new Date();
         // attempt to find existing transaction with the same hash
         var existingTransaction = this.transactions.find(function (item) { return item.hash === transaction.hash; });
         // update existing transaction if it exists
@@ -85,6 +89,7 @@ var Invoice = /** @class */ (function () {
             }
             // update existing transaction
             existingTransaction.confirmations = transaction.confirmations;
+            existingTransaction.updatedDate = new Date();
             return;
         }
         // transaction does not exist, add a new one
@@ -104,6 +109,22 @@ var Invoice = /** @class */ (function () {
         }
         return InvoiceAmountState.EXACT;
     };
+    Invoice.prototype.getPaymentState = function () {
+        return this.state;
+    };
+    Invoice.prototype.setPaymentState = function (newState) {
+        // ignore no state change
+        if (newState === this.state) {
+            return;
+        }
+        // throw error if invalid state transition is requested
+        if (!this.isValidStateTransition(newState)) {
+            throw new Error("Invalid state transition from \"" + this.state + "\" to \"" + newState + "\"");
+        }
+        // update the invoice payment state
+        this.state = newState;
+        this.updatedDate = new Date();
+    };
     Invoice.prototype.getSignature = function (key) {
         return Invoice.getInvoiceSignature(this, key);
     };
@@ -113,20 +134,24 @@ var Invoice = /** @class */ (function () {
     Invoice.prototype.isComplete = function () {
         return Invoice.isCompleteState(this.state);
     };
-    Invoice.prototype.hasSufficientConfirmations = function (requiredConfirmationCount) {
-        // we need at least one transaction to be confirmed
+    Invoice.prototype.getConfirmationCount = function () {
+        // consider lack of transactions as zero confirmations
         if (this.transactions.length === 0) {
-            return false;
+            return 0;
         }
-        // if any of the transactions have less than required confirmations then return false
+        // start at positive infinity
+        var minimumConfirmationCount = Infinity;
+        // find the minimum confirmation count
         for (var _i = 0, _a = this.transactions; _i < _a.length; _i++) {
             var transaction = _a[_i];
-            if (transaction.confirmations < requiredConfirmationCount) {
-                return false;
+            if (transaction.confirmations < minimumConfirmationCount) {
+                minimumConfirmationCount = transaction.confirmations;
             }
         }
-        // all transactions have sufficient confirmations
-        return true;
+        return minimumConfirmationCount;
+    };
+    Invoice.prototype.hasSufficientConfirmations = function (requiredConfirmationCount) {
+        return this.getConfirmationCount() >= requiredConfirmationCount;
     };
     return Invoice;
 }());
