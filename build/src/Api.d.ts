@@ -46,6 +46,7 @@ export declare const dummyLog: ILog;
  * Default base configuration.
  */
 export declare const defaultBaseConfig: IBlockchainBaseConfig;
+export declare const BITCOIN_TO_SATOSHI = 100000000;
 /**
  * Provides API for receiving payments through blockchain.info service.
  *
@@ -67,5 +68,7 @@ export default class Api {
      */
     constructor(userConfig: IBlockchainUserConfig, log?: ILog);
     static getPaymentRequestQrCode(address: string, amount: number | string, message: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
+    static satoshiToBitcoin(microValue: number): number;
+    static bitcoinToSatoshi(floatValue: number): number;
     generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
 }

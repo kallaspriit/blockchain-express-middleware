@@ -70,6 +70,8 @@ exports.dummyLog = {
 exports.defaultBaseConfig = {
     apiBaseUrl: "https://api.blockchain.info/v2/receive",
 };
+// one bitcoin in 100 000 000 satoshis
+exports.BITCOIN_TO_SATOSHI = 100000000;
 /**
  * Provides API for receiving payments through blockchain.info service.
  *
@@ -99,6 +101,12 @@ var Api = /** @class */ (function () {
             message: message,
         });
         return qr.image(payload, __assign({ size: 4, type: "png" }, options));
+    };
+    Api.satoshiToBitcoin = function (microValue) {
+        return microValue / exports.BITCOIN_TO_SATOSHI;
+    };
+    Api.bitcoinToSatoshi = function (floatValue) {
+        return Math.floor(floatValue * exports.BITCOIN_TO_SATOSHI);
     };
     Api.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {

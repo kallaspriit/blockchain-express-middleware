@@ -72,6 +72,9 @@ export const defaultBaseConfig: IBlockchainBaseConfig = {
   apiBaseUrl: "https://api.blockchain.info/v2/receive",
 };
 
+// one bitcoin in 100 000 000 satoshis
+export const BITCOIN_TO_SATOSHI = 100000000;
+
 /**
  * Provides API for receiving payments through blockchain.info service.
  *
@@ -114,6 +117,14 @@ export default class Api {
       type: "png",
       ...options,
     });
+  }
+
+  public static satoshiToBitcoin(microValue: number): number {
+    return microValue / BITCOIN_TO_SATOSHI;
+  }
+
+  public static bitcoinToSatoshi(floatValue: number): number {
+    return Math.floor(floatValue * BITCOIN_TO_SATOSHI);
   }
 
   public async generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress> {
