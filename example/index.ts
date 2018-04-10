@@ -7,7 +7,7 @@ import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
 import * as uuid from "uuid";
-import { Api, Invoice, InvoicePaymentState } from "../src";
+import blockchainMiddleware, { Api, Invoice, InvoicePaymentState } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -51,12 +51,16 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
+// use the blockchain middleware
+// app.use(blockchainMiddleware());
+
 // handle index view request
 app.get("/", async (_request, response, _next) => {
   // show request payment form
   response.send(`
-    <h1>Request Bitcoin payment</h1>
+    <h1>Bitcoin gateway</h1>
 
+    <h2>Request Bitcoin payment</h2>
     <form method="post" action="/pay">
       <p>
         <input type="text" name="dueAmount" value="0.0001" /> Amount (BTC)
@@ -68,6 +72,24 @@ app.get("/", async (_request, response, _next) => {
         <input type="submit" name="submit" value="Request payment" />
       </p>
     </form>
+
+    <h2>Bitcoin payments</h2>
+    <ul>
+      ${invoices.map(
+        invoice => `
+        <li>
+          <a href="/invoice/${invoice.id}">${invoice.message} [${invoice.id}]</a>
+          <ul>
+            <li><strong>Address:</strong> ${invoice.address}</li>
+            <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
+          invoice.dueAmount,
+        )} BTC (${invoice.getAmountState()})</li>
+            <li><strong>State:</strong> ${invoice.getPaymentState()}</li>
+          </ul>
+        </li>
+      `,
+      )}
+    </ul>
   `);
 });
 
@@ -139,6 +161,8 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
       <li><strong>Confirmations:</strong> ${invoice.getConfirmationCount()}/${config.app.requiredConfirmations}</li>
       <li><strong>State:</strong> ${invoice.getPaymentState()}</li>
       <li><strong>Is complete:</strong> ${invoice.isComplete() ? "yes" : "no"}</li>
+      <li><strong>Created:</strong> ${invoice.createdDate.toISOString()}</li>
+      <li><strong>Updated:</strong> ${invoice.updatedDate.toISOString()}</li>
       <li>
         <strong>Transactions:</strong>
         <ul>
@@ -149,7 +173,9 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
                 <ul>
                   <li><strong>Hash:</strong> ${transaction.hash}</li>
                   <li><strong>Amount:</strong> ${Api.satoshiToBitcoin(transaction.amount)} BTC</li>
-                  <li><strong>Confirmations:</strong> ${transaction.confirmations}</li>
+                  <li><strong>Confirmations:</strong> ${transaction.confirmations}/${
+              config.app.requiredConfirmations
+            }</li>
                   <li><strong>Created:</strong> ${transaction.createdDate.toISOString()}</li>
                   <li><strong>Updated:</strong> ${transaction.updatedDate.toISOString()}</li>
                 </ul>
