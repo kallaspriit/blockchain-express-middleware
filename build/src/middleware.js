@@ -57,7 +57,7 @@ exports.default = (function (options) {
     }); });
     // handle payment update request
     router.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-        var _a, signature, address, transactionHash, value, confirmations, invoiceInfo, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isAlreadyComplete, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
+        var _a, signature, address, transactionHash, value, confirmations, invoiceInfo, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -79,8 +79,7 @@ exports.default = (function (options) {
                     isSignatureValid = signature === expectedSignature;
                     isAddressValid = invoice.address === address;
                     isHashValid = true;
-                    isAlreadyComplete = invoice.isComplete();
-                    isUpdateValid = isSignatureValid && isAddressValid && isHashValid && !isAlreadyComplete;
+                    isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
                     // respond with bad request if update was not valid
                     if (!isUpdateValid) {
                         // log failing update info
@@ -95,6 +94,11 @@ exports.default = (function (options) {
                         }, "got invalid payment update");
                         // respond with bad request
                         response.status(HttpStatus.BAD_REQUEST).send("got invalid payment status update");
+                        return [2 /*return*/];
+                    }
+                    // don't update an invoice that is already complete, also stop status updates
+                    if (invoice.isComplete()) {
+                        response.send(OK_RESPONSE);
                         return [2 /*return*/];
                     }
                     // adds new transaction or updates an existing one if already exists
@@ -136,11 +140,11 @@ exports.default = (function (options) {
                         isComplete: isComplete,
                     }, "got valid payment update");
                     // save the invoice
-                    return [4 /*yield*/, options.saveInvoice(invoice.toJSON())];
+                    return [4 /*yield*/, options.saveInvoice(invoice)];
                 case 2:
                     // save the invoice
                     _b.sent();
-                    // respond with *ok* if we have reached a final state (will not get new updates after this)
+                    // respond with ok if we have reached a final state (will not get new updates after this)
                     response.send(responseText);
                     return [2 /*return*/];
             }

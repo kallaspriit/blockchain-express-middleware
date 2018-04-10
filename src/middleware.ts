@@ -1,6 +1,6 @@
 import * as express from "express";
 import * as HttpStatus from "http-status-codes";
-import { Api, IInvoice, Invoice, InvoicePaymentState } from "./index";
+import { Api, Invoice, InvoicePaymentState } from "./index";
 
 export interface IQrCodeParameters {
   address: string;
@@ -11,8 +11,8 @@ export interface IQrCodeParameters {
 export interface IOptions {
   secret: string;
   requiredConfirmations: number;
-  saveInvoice(invoice: IInvoice): Promise<void>;
-  loadInvoice(address: string): Promise<IInvoice | undefined>;
+  saveInvoice(invoice: Invoice): Promise<void>;
+  loadInvoice(address: string): Promise<Invoice | undefined>;
 }
 
 // private constants
@@ -64,8 +64,7 @@ export default (options: IOptions): express.Router => {
     const isSignatureValid = signature === expectedSignature;
     const isAddressValid = invoice.address === address;
     const isHashValid = true; // TODO: actually validate hash
-    const isAlreadyComplete = invoice.isComplete();
-    const isUpdateValid = isSignatureValid && isAddressValid && isHashValid && !isAlreadyComplete;
+    const isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
 
     // respond with bad request if update was not valid
     if (!isUpdateValid) {
@@ -85,6 +84,13 @@ export default (options: IOptions): express.Router => {
 
       // respond with bad request
       response.status(HttpStatus.BAD_REQUEST).send("got invalid payment status update");
+
+      return;
+    }
+
+    // don't update an invoice that is already complete, also stop status updates
+    if (invoice.isComplete()) {
+      response.send(OK_RESPONSE);
 
       return;
     }
@@ -141,9 +147,9 @@ export default (options: IOptions): express.Router => {
     );
 
     // save the invoice
-    await options.saveInvoice(invoice.toJSON());
+    await options.saveInvoice(invoice);
 
-    // respond with *ok* if we have reached a final state (will not get new updates after this)
+    // respond with ok if we have reached a final state (will not get new updates after this)
     response.send(responseText);
   });
 

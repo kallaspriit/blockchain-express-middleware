@@ -49,16 +49,17 @@ var Invoice = /** @class */ (function () {
             // create new interface info otherwise
             this.dueAmount = info.dueAmount;
             this.message = info.message;
+            this.address = info.address;
             this.createdDate = new Date();
             this.updatedDate = new Date();
         }
     }
     // TODO: expiry date?
     // TODO: state transitions
-    Invoice.getInvoiceSignature = function (info, key) {
+    Invoice.getInvoiceSignature = function (info, secret) {
         var tokens = [info.dueAmount.toString(), info.message];
         var payload = tokens.join(":");
-        return crypto_1.createHmac("sha512", key)
+        return crypto_1.createHmac("sha512", secret)
             .update(payload)
             .digest("hex");
     };

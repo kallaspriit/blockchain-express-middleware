@@ -46,6 +46,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
 var qr = require("qr-image");
 var querystring = require("querystring");
+var index_1 = require("./index");
 // dummy log that does not do anything
 exports.dummyLog = {
     info: function (_message) {
@@ -105,7 +106,8 @@ var Api = /** @class */ (function () {
     Api.satoshiToBitcoin = function (microValue) {
         return microValue / exports.BITCOIN_TO_SATOSHI;
     };
-    Api.bitcoinToSatoshi = function (floatValue) {
+    Api.bitcoinToSatoshi = function (value) {
+        var floatValue = typeof value === "string" ? parseFloat(value) : value;
         return Math.floor(floatValue * exports.BITCOIN_TO_SATOSHI);
     };
     Api.prototype.generateReceivingAddress = function (callbackUrl) {
@@ -149,6 +151,27 @@ var Api = /** @class */ (function () {
                         }, "generating receiving address failed");
                         throw error_1;
                     case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    Api.prototype.createInvoice = function (info) {
+        return __awaiter(this, void 0, void 0, function () {
+            var signature, callbackUrl, receivingAddress, invoice;
+            return __generator(this, function (_a) {
+                switch (_a.label) {
+                    case 0:
+                        signature = index_1.Invoice.getInvoiceSignature(info, info.secret);
+                        callbackUrl = info.callbackUrl + "?" + querystring.stringify({ signature: signature });
+                        return [4 /*yield*/, this.generateReceivingAddress(callbackUrl)];
+                    case 1:
+                        receivingAddress = _a.sent();
+                        invoice = new index_1.Invoice({
+                            dueAmount: info.dueAmount,
+                            message: info.message,
+                            address: receivingAddress.address,
+                        });
+                        return [2 /*return*/, invoice];
                 }
             });
         });

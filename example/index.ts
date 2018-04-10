@@ -35,7 +35,7 @@ const config = {
   },
 };
 
-// invoices "database" emulated with a simple array
+// invoices "database" emulated with a simple array (store the data only)
 const invoiceDatabase: IInvoice[] = [];
 
 // initiate api
@@ -54,18 +54,8 @@ app.use(
   blockchainMiddleware({
     secret: config.app.secret,
     requiredConfirmations: config.app.requiredConfirmations,
-    saveInvoice: async invoiceInfo => {
-      // find invoice by address
-      const index = invoiceDatabase.findIndex(item => item.address === invoiceInfo.address);
-
-      // update existing invoice if exists, otherwise add a new one
-      if (index !== -1) {
-        invoiceDatabase[index] = invoiceInfo;
-      } else {
-        invoiceDatabase.push(invoiceInfo);
-      }
-    },
-    loadInvoice: async address => invoiceDatabase.find(item => item.address === address),
+    saveInvoice,
+    loadInvoice,
   }),
 );
 
@@ -112,51 +102,39 @@ app.get("/", async (_request, response, _next) => {
 
 // handle payment form request
 app.post("/pay", async (request, response, next) => {
-  // extract amount and message from the request payment form
+  // extract invoice info from the request payment form (you'd normally want to validate these)
   const { dueAmount, message } = request.body;
 
-  // create an invoice
-  const invoice = new Invoice({
-    dueAmount: Api.bitcoinToSatoshi(dueAmount),
-    message,
-  });
-
-  // build invoice signature to later verify that the handle payment request is valid
-  const signature = invoice.getSignature(config.app.secret);
-
-  // build the callback url, containing invoice info signed with the secret
-  const callbackUrl = getAbsoluteUrl(`/payment/handle-payment?${querystring.stringify({ signature })}`);
-
   try {
-    // generate next receiving address
-    const receivingAddress = await api.generateReceivingAddress(callbackUrl);
+    // create invoice
+    const invoice = await api.createInvoice({
+      dueAmount: Api.bitcoinToSatoshi(dueAmount),
+      message,
+      secret: config.app.secret,
+      callbackUrl: getAbsoluteUrl("/payment/handle-payment"),
+    });
 
-    // update invoice address
-    invoice.address = receivingAddress.address;
+    // save the invoice (this would normally hit an actual database)
+    await saveInvoice(invoice);
 
-    // redirect user to invoice view
+    // redirect user to invoice view (use address as unique id)
     response.redirect(`/invoice/${invoice.address}`);
   } catch (error) {
     next(error);
   }
-
-  // store the invoice (this would normally be an actual database)
-  invoiceDatabase.push(invoice.toJSON());
 });
 
 // handle invoice request
 app.get("/invoice/:address", async (request, response, _next) => {
+  // extract address from the url and attempt to load the invoice
   const { address } = request.params;
-  const invoiceInfo = invoiceDatabase.find(item => item.address === address);
+  const invoice = await loadInvoice(address);
 
-  if (!invoiceInfo) {
-    response.status(HttpStatus.NOT_FOUND).send("Invoice could not be found");
+  if (!invoice) {
+    response.status(HttpStatus.NOT_FOUND).send(`Invoice with address "${address}" could not be found`);
 
     return;
   }
-
-  // de-serialize the invoice
-  const invoice = new Invoice(invoiceInfo);
 
   // build qr code url
   const qrCodeParameters = {
@@ -243,6 +221,36 @@ if (config.server.useSSL) {
       response.redirect(`https://${request.hostname}${request.originalUrl}`);
     })
     .listen(HTTP_PORT);
+}
+
+async function saveInvoice(invoice: Invoice): Promise<void> {
+  // find invoice by address
+  const index = invoiceDatabase.findIndex(item => item.address === invoice.address);
+
+  // update existing invoice if exists, otherwise add a new one
+  if (index !== -1) {
+    invoiceDatabase[index] = invoice.toJSON();
+  } else {
+    invoiceDatabase.push(invoice.toJSON());
+  }
+
+  // save invoice for complete state is guaranteed to be called only once, ship out the products etc
+  if (invoice.isComplete()) {
+    console.log(invoice, "invoice is now complete");
+  }
+}
+
+async function loadInvoice(address: string): Promise<Invoice | undefined> {
+  // search for invoice by address
+  const invoiceInfo = invoiceDatabase.find(item => item.address === address);
+
+  // return undefined if not found
+  if (!invoiceInfo) {
+    return undefined;
+  }
+
+  // de-serialize the invoice
+  return new Invoice(invoiceInfo);
 }
 
 function getAbsoluteUrl(path: string) {

@@ -1,6 +1,7 @@
 import Axios from "axios";
 import * as qr from "qr-image";
 import * as querystring from "querystring";
+import { Invoice } from "./index";
 
 /**
  * Base configuration that has reasonable defaults and do no require to be redefined by the user.
@@ -42,6 +43,13 @@ export interface IGenerateReceivingAddressParameters {
   callback: string;
   key: string;
   gap_limit?: number;
+}
+
+export interface ICreateInvoiceInfo {
+  dueAmount: number;
+  message: string;
+  secret: string;
+  callbackUrl: string;
 }
 
 /* tslint:disable:no-any prefer-function-over-method */
@@ -123,7 +131,9 @@ export default class Api {
     return microValue / BITCOIN_TO_SATOSHI;
   }
 
-  public static bitcoinToSatoshi(floatValue: number): number {
+  public static bitcoinToSatoshi(value: number | string): number {
+    const floatValue = typeof value === "string" ? parseFloat(value) : value;
+
     return Math.floor(floatValue * BITCOIN_TO_SATOSHI);
   }
 
@@ -172,5 +182,25 @@ export default class Api {
 
       throw error;
     }
+  }
+
+  public async createInvoice(info: ICreateInvoiceInfo): Promise<Invoice> {
+    // build invoice signature to later verify that the handle payment request is valid
+    const signature = Invoice.getInvoiceSignature(info, info.secret);
+
+    // build the callback url, containing invoice info signed with the secret
+    const callbackUrl = `${info.callbackUrl}?${querystring.stringify({ signature })}`;
+
+    // generate next receiving address
+    const receivingAddress = await this.generateReceivingAddress(callbackUrl);
+
+    // create a new invoice
+    const invoice = new Invoice({
+      dueAmount: info.dueAmount,
+      message: info.message,
+      address: receivingAddress.address,
+    });
+
+    return invoice;
   }
 }

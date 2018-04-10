@@ -22,22 +22,23 @@ export declare enum InvoiceAmountState {
 export interface IInvoice {
     dueAmount: number;
     message: string;
-    address?: string;
+    address: string;
     transactions: ITransaction[];
     createdDate: Date;
     updatedDate: Date;
     paymentState: InvoicePaymentState;
 }
+export declare type InvoiceConstructorInfo = Pick<Invoice, "dueAmount" | "message" | "address">;
 export default class Invoice {
     dueAmount: number;
     message: string;
-    address?: string;
-    transactions: ITransaction[];
+    address: string;
     createdDate: Date;
     updatedDate: Date;
+    transactions: ITransaction[];
     private paymentState;
-    constructor(info: Pick<Invoice, "dueAmount" | "message"> | IInvoice);
-    static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string): string;
+    constructor(info: InvoiceConstructorInfo | IInvoice);
+    static getInvoiceSignature(info: IInvoiceSignatureInfo, secret: string): string;
     static isValidInvoiceStateTransition(currentState: InvoicePaymentState, newState: InvoicePaymentState): boolean;
     static isCompleteState(state: InvoicePaymentState): boolean;
     registerTransaction(transaction: ITransaction): void;

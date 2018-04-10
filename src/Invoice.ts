@@ -50,12 +50,15 @@ export enum InvoiceAmountState {
 export interface IInvoice {
   dueAmount: number;
   message: string;
-  address?: string;
+  address: string;
   transactions: ITransaction[];
   createdDate: Date;
   updatedDate: Date;
   paymentState: InvoicePaymentState;
 }
+
+// info needed to create an invoice
+export type InvoiceConstructorInfo = Pick<Invoice, "dueAmount" | "message" | "address">;
 
 // tslint:disable-next-line:no-any
 function isInvoiceInterface(info: any): info is IInvoice {
@@ -65,13 +68,13 @@ function isInvoiceInterface(info: any): info is IInvoice {
 export default class Invoice {
   public dueAmount: number;
   public message: string;
-  public address?: string;
-  public transactions: ITransaction[] = [];
+  public address: string;
   public createdDate: Date;
   public updatedDate: Date;
+  public transactions: ITransaction[] = [];
   private paymentState = InvoicePaymentState.PENDING;
 
-  public constructor(info: Pick<Invoice, "dueAmount" | "message"> | IInvoice) {
+  public constructor(info: InvoiceConstructorInfo | IInvoice) {
     if (isInvoiceInterface(info)) {
       // de-serialize if data matching invoice interface is given
       this.dueAmount = info.dueAmount;
@@ -85,6 +88,7 @@ export default class Invoice {
       // create new interface info otherwise
       this.dueAmount = info.dueAmount;
       this.message = info.message;
+      this.address = info.address;
       this.createdDate = new Date();
       this.updatedDate = new Date();
     }
@@ -93,11 +97,11 @@ export default class Invoice {
   // TODO: expiry date?
   // TODO: state transitions
 
-  public static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string) {
+  public static getInvoiceSignature(info: IInvoiceSignatureInfo, secret: string) {
     const tokens = [info.dueAmount.toString(), info.message];
     const payload = tokens.join(":");
 
-    return createHmac("sha512", key)
+    return createHmac("sha512", secret)
       .update(payload)
       .digest("hex");
   }

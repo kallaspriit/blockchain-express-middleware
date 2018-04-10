@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import * as qr from "qr-image";
+import { Invoice } from "./index";
 /**
  * Base configuration that has reasonable defaults and do no require to be redefined by the user.
  */
@@ -36,6 +37,12 @@ export interface IGenerateReceivingAddressParameters {
     key: string;
     gap_limit?: number;
 }
+export interface ICreateInvoiceInfo {
+    dueAmount: number;
+    message: string;
+    secret: string;
+    callbackUrl: string;
+}
 export interface ILog {
     info(message?: any, ...optionalParams: any[]): void;
     error(message?: any, ...optionalParams: any[]): void;
@@ -69,6 +76,7 @@ export default class Api {
     constructor(userConfig: IBlockchainUserConfig, log?: ILog);
     static getPaymentRequestQrCode(address: string, amount: number | string, message: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
     static satoshiToBitcoin(microValue: number): number;
-    static bitcoinToSatoshi(floatValue: number): number;
+    static bitcoinToSatoshi(value: number | string): number;
     generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
+    createInvoice(info: ICreateInvoiceInfo): Promise<Invoice>;
 }

@@ -1,6 +1,6 @@
 /// <reference types="express" />
 import * as express from "express";
-import { IInvoice } from "./index";
+import { Invoice } from "./index";
 export interface IQrCodeParameters {
     address: string;
     amount: number | string;
@@ -9,8 +9,8 @@ export interface IQrCodeParameters {
 export interface IOptions {
     secret: string;
     requiredConfirmations: number;
-    saveInvoice(invoice: IInvoice): Promise<void>;
-    loadInvoice(address: string): Promise<IInvoice | undefined>;
+    saveInvoice(invoice: Invoice): Promise<void>;
+    loadInvoice(address: string): Promise<Invoice | undefined>;
 }
 declare const _default: (options: IOptions) => express.Router;
 export default _default;
