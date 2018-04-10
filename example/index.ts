@@ -7,7 +7,7 @@ import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
 import * as uuid from "uuid";
-import blockchainMiddleware, { Api, Invoice, InvoicePaymentState } from "../src";
+import blockchainMiddleware, { Api, Invoice } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -15,8 +15,6 @@ dotenv.config();
 // constants
 const HTTP_PORT = 80;
 const DEFAULT_PORT = 3000;
-const OK_RESPONSE = "*ok*";
-const PENDING_RESPONSE = "pending"; // actual value not important
 
 // extract configuration from the .env environment variables
 const config = {
@@ -52,7 +50,17 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // use the blockchain middleware
-app.use("/payment", blockchainMiddleware());
+app.use(
+  "/payment",
+  blockchainMiddleware({
+    secret: config.app.secret,
+    requiredConfirmations: config.app.requiredConfirmations,
+    // saveInvoice: async invoice => {
+    //   invoices.push(invoice);
+    // },
+    loadInvoice: async address => invoices.find(item => item.address === address),
+  }),
+);
 
 // handle index view request
 app.get("/", async (_request, response, _next) => {
@@ -115,7 +123,7 @@ app.post("/pay", async (request, response, next) => {
   const signature = invoice.getSignature(config.app.secret);
 
   // build the callback url, containing invoice info signed with the secret
-  const callbackUrl = getAbsoluteUrl(`/handle-payment?${querystring.stringify({ signature })}`);
+  const callbackUrl = getAbsoluteUrl(`/payment/handle-payment?${querystring.stringify({ signature })}`);
 
   try {
     // generate next receiving address
@@ -196,130 +204,6 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
       <a href="${getAbsoluteUrl(`/invoice/${invoiceId}`)}">Refresh this page</a> to check for updates.
     </p>
   `);
-});
-
-// handle qr image request
-// TODO: refactor to middleware
-// app.get("/qr", async (request, response, _next) => {
-//   const { address, amount, message } = request.query;
-
-//   const paymentRequestQrCode = Api.getPaymentRequestQrCode(address, amount, message);
-
-//   response.setHeader("Content-Type", "image/png");
-//   paymentRequestQrCode.pipe(response);
-// });
-
-// handle payment update request
-// TODO: refactor to middleware
-app.get("/handle-payment", async (request, response, _next) => {
-  const { signature, address, transaction_hash: transactionHash, value, confirmations } = request.query;
-  const invoice = invoices.find(item => item.address === address);
-
-  // give up if an invoice with given address could not be found
-  if (!invoice) {
-    console.log(
-      {
-        query: request.query,
-      },
-      "invoice could not be found",
-    );
-
-    // still send the OK response as we don't want any more updates on this invoice
-    response.send(OK_RESPONSE);
-
-    return;
-  }
-
-  // calculate expected signature
-  const expectedSignature = invoice.getSignature(config.app.secret);
-
-  // validate payment update
-  const isSignatureValid = signature === expectedSignature;
-  const isAddressValid = invoice.address === address;
-  const isHashValid = true; // TODO: actually validate hash
-  const isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
-
-  // respond with bad request if update was not valid
-  if (!isUpdateValid) {
-    // log failing update info
-    console.warn(
-      {
-        query: request.query,
-        info: { signature, address, transactionHash, value, confirmations },
-        invoice,
-        isSignatureValid,
-        isAddressValid,
-        isHashValid,
-        isUpdateValid,
-      },
-      "got invalid payment update",
-    );
-
-    // respond with bad request
-    response.status(HttpStatus.BAD_REQUEST).send("got invalid payment status update");
-
-    return;
-  }
-
-  // update is valid, update invoice info
-  // invoice.confirmations = parseInt(confirmations, 10);
-  // invoice.amountPaid = parseInt(value, 10);
-  // invoice.transactionHash = transactionHash;
-  // TODO: add transation or modify existing
-
-  // adds new transaction or updates an existing one if already exists
-  invoice.registerTransaction({
-    hash: transactionHash,
-    amount: parseInt(value, 10),
-    confirmations: parseInt(confirmations, 10),
-    createdDate: new Date(),
-    updatedDate: new Date(),
-  });
-
-  // remember previous state and resolve new state
-  const previousState = invoice.getPaymentState();
-  let newState = previousState;
-
-  // check for valid initial states to transition to paid or confirmed state
-  if ([InvoicePaymentState.PENDING, InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
-    const hasSufficientConfirmations = invoice.hasSufficientConfirmations(config.app.requiredConfirmations);
-
-    newState = hasSufficientConfirmations
-      ? InvoicePaymentState.CONFIRMED
-      : InvoicePaymentState.WAITING_FOR_CONFIRMATION;
-  }
-
-  // update invoice payment state
-  invoice.setPaymentState(newState);
-
-  // check whether invoice was just paid
-  if (previousState !== InvoicePaymentState.CONFIRMED && newState === InvoicePaymentState.CONFIRMED) {
-    // ship out the products etc..
-    // TODO: call some handler
-    console.log(invoice, "invoice is now confirmed");
-  }
-
-  // check whether handling given invoice is complete and respond accordingly
-  const isComplete = invoice.isComplete();
-  const responseText = isComplete ? OK_RESPONSE : PENDING_RESPONSE;
-
-  // log the request info
-  console.log(
-    {
-      query: request.query,
-      info: { signature, address, transactionHash, value, confirmations },
-      invoice,
-      isSignatureValid,
-      isAddressValid,
-      isHashValid,
-      isUpdateValid,
-      isComplete,
-    },
-    "got valid payment update",
-  );
-
-  // respond with *ok* if we have reached a final state (will not get new updates after this)
-  response.send(responseText);
 });
 
 // create either http or https server depending on SSL configuration
