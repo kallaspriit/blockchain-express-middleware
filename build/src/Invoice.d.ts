@@ -1,5 +1,4 @@
 export interface IInvoiceSignatureInfo {
-    id: string;
     dueAmount: number;
     message: string;
 }
@@ -20,16 +19,24 @@ export declare enum InvoiceAmountState {
     OVERPAID = "OVERPAID",
     UNDERPAID = "UNDERPAID",
 }
-export default class Invoice {
-    id: string;
+export interface IInvoice {
     dueAmount: number;
     message: string;
     address?: string;
     transactions: ITransaction[];
     createdDate: Date;
     updatedDate: Date;
-    private state;
-    constructor({id, dueAmount, message}: Pick<Invoice, "id" | "dueAmount" | "message">);
+    paymentState: InvoicePaymentState;
+}
+export default class Invoice {
+    dueAmount: number;
+    message: string;
+    address?: string;
+    transactions: ITransaction[];
+    createdDate: Date;
+    updatedDate: Date;
+    private paymentState;
+    constructor(info: Pick<Invoice, "dueAmount" | "message"> | IInvoice);
     static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string): string;
     static isValidInvoiceStateTransition(currentState: InvoicePaymentState, newState: InvoicePaymentState): boolean;
     static isCompleteState(state: InvoicePaymentState): boolean;
@@ -43,4 +50,5 @@ export default class Invoice {
     isComplete(): boolean;
     getConfirmationCount(): number;
     hasSufficientConfirmations(requiredConfirmationCount: number): boolean;
+    toJSON(): IInvoice;
 }

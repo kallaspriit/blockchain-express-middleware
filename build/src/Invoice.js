@@ -27,24 +27,36 @@ var InvoiceAmountState;
     InvoiceAmountState["OVERPAID"] = "OVERPAID";
     InvoiceAmountState["UNDERPAID"] = "UNDERPAID";
 })(InvoiceAmountState = exports.InvoiceAmountState || (exports.InvoiceAmountState = {}));
+// tslint:disable-next-line:no-any
+function isInvoiceInterface(info) {
+    return info.paymentState !== undefined;
+}
 var Invoice = /** @class */ (function () {
-    function Invoice(_a) {
-        var id = _a.id, dueAmount = _a.dueAmount, message = _a.message;
-        // public amountPaid = 0;
-        // public confirmations = 0;
+    function Invoice(info) {
         this.transactions = [];
-        this.state = InvoicePaymentState.PENDING;
-        this.id = id;
-        this.dueAmount = dueAmount;
-        this.message = message;
-        this.createdDate = new Date();
-        this.updatedDate = new Date();
+        this.paymentState = InvoicePaymentState.PENDING;
+        if (isInvoiceInterface(info)) {
+            // de-serialize if data matching invoice interface is given
+            this.dueAmount = info.dueAmount;
+            this.message = info.message;
+            this.address = info.address;
+            this.transactions = info.transactions;
+            this.createdDate = info.createdDate;
+            this.updatedDate = info.updatedDate;
+            this.paymentState = info.paymentState;
+        }
+        else {
+            // create new interface info otherwise
+            this.dueAmount = info.dueAmount;
+            this.message = info.message;
+            this.createdDate = new Date();
+            this.updatedDate = new Date();
+        }
     }
-    // TODO: created, updated, paid date
     // TODO: expiry date?
     // TODO: state transitions
     Invoice.getInvoiceSignature = function (info, key) {
-        var tokens = [info.id, info.dueAmount.toString(), info.message];
+        var tokens = [info.dueAmount.toString(), info.message];
         var payload = tokens.join(":");
         return crypto_1.createHmac("sha512", key)
             .update(payload)
@@ -85,7 +97,7 @@ var Invoice = /** @class */ (function () {
         if (existingTransaction !== undefined) {
             // make sure the amount is the same
             if (existingTransaction.amount !== transaction.amount) {
-                throw new Error("Invoice \"" + this.id + "\" existing transaction \"" + existingTransaction.hash + "\" amount of " + existingTransaction.amount + " is different from the new amount of " + transaction.amount + ", this should not happen");
+                throw new Error("Invoice \"" + this.address + "\" existing transaction \"" + existingTransaction.hash + "\" amount of " + existingTransaction.amount + " is different from the new amount of " + transaction.amount + ", this should not happen");
             }
             // update existing transaction
             existingTransaction.confirmations = transaction.confirmations;
@@ -110,29 +122,29 @@ var Invoice = /** @class */ (function () {
         return InvoiceAmountState.EXACT;
     };
     Invoice.prototype.getPaymentState = function () {
-        return this.state;
+        return this.paymentState;
     };
     Invoice.prototype.setPaymentState = function (newState) {
         // ignore no state change
-        if (newState === this.state) {
+        if (newState === this.paymentState) {
             return;
         }
         // throw error if invalid state transition is requested
         if (!this.isValidStateTransition(newState)) {
-            throw new Error("Invalid state transition from \"" + this.state + "\" to \"" + newState + "\"");
+            throw new Error("Invalid state transition from \"" + this.paymentState + "\" to \"" + newState + "\"");
         }
         // update the invoice payment state
-        this.state = newState;
+        this.paymentState = newState;
         this.updatedDate = new Date();
     };
     Invoice.prototype.getSignature = function (key) {
         return Invoice.getInvoiceSignature(this, key);
     };
     Invoice.prototype.isValidStateTransition = function (newState) {
-        return Invoice.isValidInvoiceStateTransition(this.state, newState);
+        return Invoice.isValidInvoiceStateTransition(this.paymentState, newState);
     };
     Invoice.prototype.isComplete = function () {
-        return Invoice.isCompleteState(this.state);
+        return Invoice.isCompleteState(this.paymentState);
     };
     Invoice.prototype.getConfirmationCount = function () {
         // consider lack of transactions as zero confirmations
@@ -152,6 +164,17 @@ var Invoice = /** @class */ (function () {
     };
     Invoice.prototype.hasSufficientConfirmations = function (requiredConfirmationCount) {
         return this.getConfirmationCount() >= requiredConfirmationCount;
+    };
+    Invoice.prototype.toJSON = function () {
+        return {
+            dueAmount: this.dueAmount,
+            message: this.message,
+            address: this.address,
+            transactions: this.transactions,
+            createdDate: this.createdDate,
+            updatedDate: this.updatedDate,
+            paymentState: this.getPaymentState(),
+        };
     };
     return Invoice;
 }());

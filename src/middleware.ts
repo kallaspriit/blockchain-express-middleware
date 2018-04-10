@@ -1,6 +1,6 @@
 import * as express from "express";
 import * as HttpStatus from "http-status-codes";
-import { Api, Invoice, InvoicePaymentState } from "./index";
+import { Api, IInvoice, Invoice, InvoicePaymentState } from "./index";
 
 export interface IQrCodeParameters {
   address: string;
@@ -11,8 +11,8 @@ export interface IQrCodeParameters {
 export interface IOptions {
   secret: string;
   requiredConfirmations: number;
-  // saveInvoice(invoice: Invoice): Promise<void>;
-  loadInvoice(address: string): Promise<Invoice | undefined>;
+  saveInvoice(invoice: IInvoice): Promise<void>;
+  loadInvoice(address: string): Promise<IInvoice | undefined>;
 }
 
 // private constants
@@ -37,10 +37,10 @@ export default (options: IOptions): express.Router => {
   router.get("/handle-payment", async (request, response, _next) => {
     // TODO: validate request parameters
     const { signature, address, transaction_hash: transactionHash, value, confirmations } = request.query;
-    const invoice = await options.loadInvoice(address);
+    const invoiceInfo = await options.loadInvoice(address);
 
     // give up if an invoice with given address could not be found
-    if (!invoice) {
+    if (!invoiceInfo) {
       console.log(
         {
           query: request.query,
@@ -53,6 +53,9 @@ export default (options: IOptions): express.Router => {
 
       return;
     }
+
+    // de-serialize the invoice
+    const invoice = new Invoice(invoiceInfo);
 
     // calculate expected signature
     const expectedSignature = invoice.getSignature(options.secret);
@@ -135,6 +138,9 @@ export default (options: IOptions): express.Router => {
       },
       "got valid payment update",
     );
+
+    // save the invoice
+    await options.saveInvoice(invoice.toJSON());
 
     // respond with *ok* if we have reached a final state (will not get new updates after this)
     response.send(responseText);

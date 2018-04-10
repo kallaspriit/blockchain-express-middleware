@@ -44,7 +44,6 @@ var http = require("http");
 var HttpStatus = require("http-status-codes");
 var https = require("https");
 var querystring = require("querystring");
-var uuid = require("uuid");
 var src_1 = require("../src");
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -69,8 +68,8 @@ var config = {
         requiredConfirmations: process.env.APP_REQUIRED_CONFIRMATIONS !== undefined ? parseInt(process.env.APP_REQUIRED_CONFIRMATIONS, 10) : 1,
     },
 };
-// invoices "database"
-var invoices = [];
+// invoices "database" emulated with a simple array
+var invoiceDatabase = [];
 // initiate api
 var api = new src_1.Api(config.api);
 // create the express server application
@@ -82,38 +81,45 @@ app.use(bodyParser.json());
 app.use("/payment", src_1.default({
     secret: config.app.secret,
     requiredConfirmations: config.app.requiredConfirmations,
-    // saveInvoice: async invoice => {
-    //   invoices.push(invoice);
-    // },
+    saveInvoice: function (invoiceInfo) { return __awaiter(_this, void 0, void 0, function () {
+        var index;
+        return __generator(this, function (_a) {
+            index = invoiceDatabase.findIndex(function (item) { return item.address === invoiceInfo.address; });
+            // update existing invoice if exists, otherwise add a new one
+            if (index !== -1) {
+                invoiceDatabase[index] = invoiceInfo;
+            }
+            else {
+                invoiceDatabase.push(invoiceInfo);
+            }
+            return [2 /*return*/];
+        });
+    }); },
     loadInvoice: function (address) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
-        return [2 /*return*/, invoices.find(function (item) { return item.address === address; })];
+        return [2 /*return*/, invoiceDatabase.find(function (item) { return item.address === address; })];
     }); }); },
 }));
 // handle index view request
 app.get("/", function (_request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
     return __generator(this, function (_a) {
         // show request payment form
-        response.send("\n    <h1>Bitcoin gateway</h1>\n\n    <h2>Request Bitcoin payment</h2>\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"dueAmount\" value=\"0.0001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n\n    <h2>Bitcoin payments</h2>\n    <ul>\n      " + invoices.map(function (invoice) { return "\n        <li>\n          <a href=\"/invoice/" + invoice.id + "\">" + invoice.message + "</a>\n          <ul>\n            <li><strong>Address:</strong> " + invoice.address + "</li>\n            <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n            <li><strong>State:</strong> " + invoice.getPaymentState() + " (" + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + ")</li>\n          </ul>\n        </li>\n      "; }) + "\n    </ul>\n  ");
+        response.send("\n    <h1>Bitcoin gateway</h1>\n\n    <h2>Request Bitcoin payment</h2>\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"dueAmount\" value=\"0.0001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n\n    <h2>Bitcoin payments</h2>\n    <ul>\n      " + invoiceDatabase.map(function (item) { return new src_1.Invoice(item); }).map(function (invoice) { return "\n        <li>\n          <a href=\"/invoice/" + invoice.address + "\">" + invoice.message + "</a>\n          <ul>\n            <li><strong>Address:</strong> " + invoice.address + "</li>\n            <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n            <li><strong>State:</strong> " + invoice.getPaymentState() + " (" + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + ")</li>\n          </ul>\n        </li>\n      "; }) + "\n    </ul>\n  ");
         return [2 /*return*/];
     });
 }); });
 // handle payment form request
 app.post("/pay", function (request, response, next) { return __awaiter(_this, void 0, void 0, function () {
-    var _a, dueAmount, message, id, invoice, signature, callbackUrl, receivingAddress, error_1;
+    var _a, dueAmount, message, invoice, signature, callbackUrl, receivingAddress, error_1;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
                 _a = request.body, dueAmount = _a.dueAmount, message = _a.message;
-                id = uuid.v4();
                 invoice = new src_1.Invoice({
-                    id: id,
                     dueAmount: src_1.Api.bitcoinToSatoshi(dueAmount),
                     message: message,
                 });
-                // store the invoice in memory (this would really be a database)
-                invoices.push(invoice);
                 signature = invoice.getSignature(config.app.secret);
-                callbackUrl = getAbsoluteUrl("/handle-payment?" + querystring.stringify({ signature: signature }));
+                callbackUrl = getAbsoluteUrl("/payment/handle-payment?" + querystring.stringify({ signature: signature }));
                 _b.label = 1;
             case 1:
                 _b.trys.push([1, 3, , 4]);
@@ -123,26 +129,30 @@ app.post("/pay", function (request, response, next) { return __awaiter(_this, vo
                 // update invoice address
                 invoice.address = receivingAddress.address;
                 // redirect user to invoice view
-                response.redirect("/invoice/" + invoice.id);
+                response.redirect("/invoice/" + invoice.address);
                 return [3 /*break*/, 4];
             case 3:
                 error_1 = _b.sent();
                 next(error_1);
                 return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
+            case 4:
+                // store the invoice (this would normally be an actual database)
+                invoiceDatabase.push(invoice.toJSON());
+                return [2 /*return*/];
         }
     });
 }); });
 // handle invoice request
-app.get("/invoice/:invoiceId", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-    var invoiceId, invoice, qrCodeParameters, qrCodeUrl;
+app.get("/invoice/:address", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
+    var address, invoiceInfo, invoice, qrCodeParameters, qrCodeUrl;
     return __generator(this, function (_a) {
-        invoiceId = request.params.invoiceId;
-        invoice = invoices.find(function (item) { return item.id === invoiceId; });
-        if (!invoice) {
+        address = request.params.address;
+        invoiceInfo = invoiceDatabase.find(function (item) { return item.address === address; });
+        if (!invoiceInfo) {
             response.status(HttpStatus.NOT_FOUND).send("Invoice could not be found");
             return [2 /*return*/];
         }
+        invoice = new src_1.Invoice(invoiceInfo);
         qrCodeParameters = {
             address: invoice.address,
             amount: src_1.Api.satoshiToBitcoin(invoice.dueAmount),
@@ -150,7 +160,7 @@ app.get("/invoice/:invoiceId", function (request, response, _next) { return __aw
         };
         qrCodeUrl = getAbsoluteUrl("/payment/qr?" + querystring.stringify(qrCodeParameters));
         // show payment request info along with the qr code to scan
-        response.send("\n    <h1>Invoice</h1>\n\n    <ul>\n      <li><strong>Address:</strong> " + invoice.address + "</li>\n      <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n      <li><strong>Message:</strong> " + invoice.message + "</li>\n      <li><strong>Confirmations:</strong> " + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + "</li>\n      <li><strong>State:</strong> " + invoice.getPaymentState() + "</li>\n      <li><strong>Is complete:</strong> " + (invoice.isComplete() ? "yes" : "no") + "</li>\n      <li><strong>Created:</strong> " + invoice.createdDate.toISOString() + "</li>\n      <li><strong>Updated:</strong> " + invoice.updatedDate.toISOString() + "</li>\n      <li>\n        <strong>Transactions:</strong>\n        <ul>\n          " + invoice.transactions.map(function (transaction, index) { return "\n              <li>\n                <strong>Transaction #" + (index + 1) + "</strong>\n                <ul>\n                  <li><strong>Hash:</strong> " + transaction.hash + "</li>\n                  <li><strong>Amount:</strong> " + src_1.Api.satoshiToBitcoin(transaction.amount) + " BTC</li>\n                  <li><strong>Confirmations:</strong> " + transaction.confirmations + "/" + config.app.requiredConfirmations + "</li>\n                  <li><strong>Created:</strong> " + transaction.createdDate.toISOString() + "</li>\n                  <li><strong>Updated:</strong> " + transaction.updatedDate.toISOString() + "</li>\n                </ul>\n              </li>\n          "; }) + "\n        </ul>\n      </li>\n    </ul>\n\n    <p>\n      <img src=\"" + qrCodeUrl + "\"/>\n    </p>\n\n    <p>\n      <a href=\"" + getAbsoluteUrl("/invoice/" + invoiceId) + "\">Refresh this page</a> to check for updates.\n    </p>\n  ");
+        response.send("\n    <h1>Invoice</h1>\n\n    <ul>\n      <li><strong>Address:</strong> " + invoice.address + "</li>\n      <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n      <li><strong>Message:</strong> " + invoice.message + "</li>\n      <li><strong>Confirmations:</strong> " + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + "</li>\n      <li><strong>State:</strong> " + invoice.getPaymentState() + "</li>\n      <li><strong>Is complete:</strong> " + (invoice.isComplete() ? "yes" : "no") + "</li>\n      <li><strong>Created:</strong> " + invoice.createdDate.toISOString() + "</li>\n      <li><strong>Updated:</strong> " + invoice.updatedDate.toISOString() + "</li>\n      <li>\n        <strong>Transactions:</strong>\n        <ul>\n          " + invoice.transactions.map(function (transaction, index) { return "\n              <li>\n                <strong>Transaction #" + (index + 1) + "</strong>\n                <ul>\n                  <li><strong>Hash:</strong> " + transaction.hash + "</li>\n                  <li><strong>Amount:</strong> " + src_1.Api.satoshiToBitcoin(transaction.amount) + " BTC</li>\n                  <li><strong>Confirmations:</strong> " + transaction.confirmations + "/" + config.app.requiredConfirmations + "</li>\n                  <li><strong>Created:</strong> " + transaction.createdDate.toISOString() + "</li>\n                  <li><strong>Updated:</strong> " + transaction.updatedDate.toISOString() + "</li>\n                </ul>\n              </li>\n          "; }) + "\n        </ul>\n      </li>\n    </ul>\n\n    <p>\n      <img src=\"" + qrCodeUrl + "\"/>\n    </p>\n\n    <p>\n      <a href=\"" + getAbsoluteUrl("/invoice/" + address) + "\">Refresh this page</a> to check for updates.\n    </p>\n  ");
         return [2 /*return*/];
     });
 }); });

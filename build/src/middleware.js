@@ -57,16 +57,16 @@ exports.default = (function (options) {
     }); });
     // handle payment update request
     router.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-        var _a, signature, address, transactionHash, value, confirmations, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
+        var _a, signature, address, transactionHash, value, confirmations, invoiceInfo, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
                     _a = request.query, signature = _a.signature, address = _a.address, transactionHash = _a.transaction_hash, value = _a.value, confirmations = _a.confirmations;
                     return [4 /*yield*/, options.loadInvoice(address)];
                 case 1:
-                    invoice = _b.sent();
+                    invoiceInfo = _b.sent();
                     // give up if an invoice with given address could not be found
-                    if (!invoice) {
+                    if (!invoiceInfo) {
                         console.log({
                             query: request.query,
                         }, "invoice could not be found");
@@ -74,6 +74,7 @@ exports.default = (function (options) {
                         response.send(OK_RESPONSE);
                         return [2 /*return*/];
                     }
+                    invoice = new index_1.Invoice(invoiceInfo);
                     expectedSignature = invoice.getSignature(options.secret);
                     isSignatureValid = signature === expectedSignature;
                     isAddressValid = invoice.address === address;
@@ -133,6 +134,11 @@ exports.default = (function (options) {
                         isUpdateValid: isUpdateValid,
                         isComplete: isComplete,
                     }, "got valid payment update");
+                    // save the invoice
+                    return [4 /*yield*/, options.saveInvoice(invoice.toJSON())];
+                case 2:
+                    // save the invoice
+                    _b.sent();
                     // respond with *ok* if we have reached a final state (will not get new updates after this)
                     response.send(responseText);
                     return [2 /*return*/];

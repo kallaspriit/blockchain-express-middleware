@@ -1,7 +1,6 @@
 import { createHmac } from "crypto";
 
 export interface IInvoiceSignatureInfo {
-  id: string;
   dueAmount: number;
   message: string;
 }
@@ -48,31 +47,54 @@ export enum InvoiceAmountState {
   UNDERPAID = "UNDERPAID",
 }
 
+export interface IInvoice {
+  dueAmount: number;
+  message: string;
+  address?: string;
+  transactions: ITransaction[];
+  createdDate: Date;
+  updatedDate: Date;
+  paymentState: InvoicePaymentState;
+}
+
+// tslint:disable-next-line:no-any
+function isInvoiceInterface(info: any): info is IInvoice {
+  return info.paymentState !== undefined;
+}
+
 export default class Invoice {
-  public id: string;
   public dueAmount: number;
   public message: string;
   public address?: string;
-  // public amountPaid = 0;
-  // public confirmations = 0;
   public transactions: ITransaction[] = [];
   public createdDate: Date;
   public updatedDate: Date;
-  private state = InvoicePaymentState.PENDING;
+  private paymentState = InvoicePaymentState.PENDING;
 
-  public constructor({ id, dueAmount, message }: Pick<Invoice, "id" | "dueAmount" | "message">) {
-    this.id = id;
-    this.dueAmount = dueAmount;
-    this.message = message;
-    this.createdDate = new Date();
-    this.updatedDate = new Date();
+  public constructor(info: Pick<Invoice, "dueAmount" | "message"> | IInvoice) {
+    if (isInvoiceInterface(info)) {
+      // de-serialize if data matching invoice interface is given
+      this.dueAmount = info.dueAmount;
+      this.message = info.message;
+      this.address = info.address;
+      this.transactions = info.transactions;
+      this.createdDate = info.createdDate;
+      this.updatedDate = info.updatedDate;
+      this.paymentState = info.paymentState;
+    } else {
+      // create new interface info otherwise
+      this.dueAmount = info.dueAmount;
+      this.message = info.message;
+      this.createdDate = new Date();
+      this.updatedDate = new Date();
+    }
   }
-  // TODO: created, updated, paid date
+
   // TODO: expiry date?
   // TODO: state transitions
 
   public static getInvoiceSignature(info: IInvoiceSignatureInfo, key: string) {
-    const tokens = [info.id, info.dueAmount.toString(), info.message];
+    const tokens = [info.dueAmount.toString(), info.message];
     const payload = tokens.join(":");
 
     return createHmac("sha512", key)
@@ -127,7 +149,7 @@ export default class Invoice {
       // make sure the amount is the same
       if (existingTransaction.amount !== transaction.amount) {
         throw new Error(
-          `Invoice "${this.id}" existing transaction "${existingTransaction.hash}" amount of ${
+          `Invoice "${this.address}" existing transaction "${existingTransaction.hash}" amount of ${
             existingTransaction.amount
           } is different from the new amount of ${transaction.amount}, this should not happen`,
         );
@@ -162,22 +184,22 @@ export default class Invoice {
   }
 
   public getPaymentState(): InvoicePaymentState {
-    return this.state;
+    return this.paymentState;
   }
 
   public setPaymentState(newState: InvoicePaymentState) {
     // ignore no state change
-    if (newState === this.state) {
+    if (newState === this.paymentState) {
       return;
     }
 
     // throw error if invalid state transition is requested
     if (!this.isValidStateTransition(newState)) {
-      throw new Error(`Invalid state transition from "${this.state}" to "${newState}"`);
+      throw new Error(`Invalid state transition from "${this.paymentState}" to "${newState}"`);
     }
 
     // update the invoice payment state
-    this.state = newState;
+    this.paymentState = newState;
     this.updatedDate = new Date();
   }
 
@@ -186,11 +208,11 @@ export default class Invoice {
   }
 
   public isValidStateTransition(newState: InvoicePaymentState): boolean {
-    return Invoice.isValidInvoiceStateTransition(this.state, newState);
+    return Invoice.isValidInvoiceStateTransition(this.paymentState, newState);
   }
 
   public isComplete(): boolean {
-    return Invoice.isCompleteState(this.state);
+    return Invoice.isCompleteState(this.paymentState);
   }
 
   public getConfirmationCount(): number {
@@ -214,5 +236,17 @@ export default class Invoice {
 
   public hasSufficientConfirmations(requiredConfirmationCount: number) {
     return this.getConfirmationCount() >= requiredConfirmationCount;
+  }
+
+  public toJSON(): IInvoice {
+    return {
+      dueAmount: this.dueAmount,
+      message: this.message,
+      address: this.address,
+      transactions: this.transactions,
+      createdDate: this.createdDate,
+      updatedDate: this.updatedDate,
+      paymentState: this.getPaymentState(),
+    };
   }
 }

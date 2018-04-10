@@ -6,8 +6,7 @@ import * as http from "http";
 import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
-import * as uuid from "uuid";
-import blockchainMiddleware, { Api, Invoice } from "../src";
+import blockchainMiddleware, { Api, IInvoice, Invoice } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -36,8 +35,8 @@ const config = {
   },
 };
 
-// invoices "database"
-const invoices: Invoice[] = [];
+// invoices "database" emulated with a simple array
+const invoiceDatabase: IInvoice[] = [];
 
 // initiate api
 const api = new Api(config.api);
@@ -55,10 +54,18 @@ app.use(
   blockchainMiddleware({
     secret: config.app.secret,
     requiredConfirmations: config.app.requiredConfirmations,
-    // saveInvoice: async invoice => {
-    //   invoices.push(invoice);
-    // },
-    loadInvoice: async address => invoices.find(item => item.address === address),
+    saveInvoice: async invoiceInfo => {
+      // find invoice by address
+      const index = invoiceDatabase.findIndex(item => item.address === invoiceInfo.address);
+
+      // update existing invoice if exists, otherwise add a new one
+      if (index !== -1) {
+        invoiceDatabase[index] = invoiceInfo;
+      } else {
+        invoiceDatabase.push(invoiceInfo);
+      }
+    },
+    loadInvoice: async address => invoiceDatabase.find(item => item.address === address),
   }),
 );
 
@@ -83,10 +90,10 @@ app.get("/", async (_request, response, _next) => {
 
     <h2>Bitcoin payments</h2>
     <ul>
-      ${invoices.map(
+      ${invoiceDatabase.map(item => new Invoice(item)).map(
         invoice => `
         <li>
-          <a href="/invoice/${invoice.id}">${invoice.message}</a>
+          <a href="/invoice/${invoice.address}">${invoice.message}</a>
           <ul>
             <li><strong>Address:</strong> ${invoice.address}</li>
             <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
@@ -109,15 +116,10 @@ app.post("/pay", async (request, response, next) => {
   const { dueAmount, message } = request.body;
 
   // create an invoice
-  const id = uuid.v4();
   const invoice = new Invoice({
-    id,
     dueAmount: Api.bitcoinToSatoshi(dueAmount),
     message,
   });
-
-  // store the invoice in memory (this would really be a database)
-  invoices.push(invoice);
 
   // build invoice signature to later verify that the handle payment request is valid
   const signature = invoice.getSignature(config.app.secret);
@@ -133,22 +135,28 @@ app.post("/pay", async (request, response, next) => {
     invoice.address = receivingAddress.address;
 
     // redirect user to invoice view
-    response.redirect(`/invoice/${invoice.id}`);
+    response.redirect(`/invoice/${invoice.address}`);
   } catch (error) {
     next(error);
   }
+
+  // store the invoice (this would normally be an actual database)
+  invoiceDatabase.push(invoice.toJSON());
 });
 
 // handle invoice request
-app.get("/invoice/:invoiceId", async (request, response, _next) => {
-  const { invoiceId } = request.params;
-  const invoice = invoices.find(item => item.id === invoiceId);
+app.get("/invoice/:address", async (request, response, _next) => {
+  const { address } = request.params;
+  const invoiceInfo = invoiceDatabase.find(item => item.address === address);
 
-  if (!invoice) {
+  if (!invoiceInfo) {
     response.status(HttpStatus.NOT_FOUND).send("Invoice could not be found");
 
     return;
   }
+
+  // de-serialize the invoice
+  const invoice = new Invoice(invoiceInfo);
 
   // build qr code url
   const qrCodeParameters = {
@@ -201,7 +209,7 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
     </p>
 
     <p>
-      <a href="${getAbsoluteUrl(`/invoice/${invoiceId}`)}">Refresh this page</a> to check for updates.
+      <a href="${getAbsoluteUrl(`/invoice/${address}`)}">Refresh this page</a> to check for updates.
     </p>
   `);
 });
