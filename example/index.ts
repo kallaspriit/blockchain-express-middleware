@@ -52,7 +52,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // use the blockchain middleware
-app.use(blockchainMiddleware());
+app.use("/payment", blockchainMiddleware());
 
 // handle index view request
 app.get("/", async (_request, response, _next) => {
@@ -148,7 +148,7 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
     amount: Api.satoshiToBitcoin(invoice.dueAmount),
     message: invoice.message,
   };
-  const qrCodeUrl = getAbsoluteUrl(`/qr?${querystring.stringify(qrCodeParameters)}`);
+  const qrCodeUrl = getAbsoluteUrl(`/payment/qr?${querystring.stringify(qrCodeParameters)}`);
 
   // show payment request info along with the qr code to scan
   response.send(`
@@ -200,14 +200,14 @@ app.get("/invoice/:invoiceId", async (request, response, _next) => {
 
 // handle qr image request
 // TODO: refactor to middleware
-app.get("/qr", async (request, response, _next) => {
-  const { address, amount, message } = request.query;
+// app.get("/qr", async (request, response, _next) => {
+//   const { address, amount, message } = request.query;
 
-  const paymentRequestQrCode = Api.getPaymentRequestQrCode(address, amount, message);
+//   const paymentRequestQrCode = Api.getPaymentRequestQrCode(address, amount, message);
 
-  response.setHeader("Content-Type", "image/png");
-  paymentRequestQrCode.pipe(response);
-});
+//   response.setHeader("Content-Type", "image/png");
+//   paymentRequestQrCode.pipe(response);
+// });
 
 // handle payment update request
 // TODO: refactor to middleware
