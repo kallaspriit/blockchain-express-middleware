@@ -78,13 +78,15 @@ app.get("/", async (_request, response, _next) => {
       ${invoices.map(
         invoice => `
         <li>
-          <a href="/invoice/${invoice.id}">${invoice.message} [${invoice.id}]</a>
+          <a href="/invoice/${invoice.id}">${invoice.message}</a>
           <ul>
             <li><strong>Address:</strong> ${invoice.address}</li>
             <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
           invoice.dueAmount,
         )} BTC (${invoice.getAmountState()})</li>
-            <li><strong>State:</strong> ${invoice.getPaymentState()}</li>
+            <li><strong>State:</strong> ${invoice.getPaymentState()} (${invoice.getConfirmationCount()}/${
+          config.app.requiredConfirmations
+        })</li>
           </ul>
         </li>
       `,
