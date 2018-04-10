@@ -71,7 +71,7 @@ app.use(
 
 // handle index view request
 app.get("/", async (_request, response, _next) => {
-  // show request payment form
+  // show request payment form and list of existing payments
   response.send(`
     <h1>Bitcoin gateway</h1>
 

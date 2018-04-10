@@ -64,7 +64,8 @@ export default (options: IOptions): express.Router => {
     const isSignatureValid = signature === expectedSignature;
     const isAddressValid = invoice.address === address;
     const isHashValid = true; // TODO: actually validate hash
-    const isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
+    const isAlreadyComplete = invoice.isComplete();
+    const isUpdateValid = isSignatureValid && isAddressValid && isHashValid && !isAlreadyComplete;
 
     // respond with bad request if update was not valid
     if (!isUpdateValid) {

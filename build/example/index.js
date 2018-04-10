@@ -102,7 +102,7 @@ app.use("/payment", src_1.default({
 // handle index view request
 app.get("/", function (_request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
     return __generator(this, function (_a) {
-        // show request payment form
+        // show request payment form and list of existing payments
         response.send("\n    <h1>Bitcoin gateway</h1>\n\n    <h2>Request Bitcoin payment</h2>\n    <form method=\"post\" action=\"/pay\">\n      <p>\n        <input type=\"text\" name=\"dueAmount\" value=\"0.0001\" /> Amount (BTC)\n      </p>\n      <p>\n        <input type=\"text\" name=\"message\" value=\"Test payment\" /> Message\n      </p>\n      <p>\n        <input type=\"submit\" name=\"submit\" value=\"Request payment\" />\n      </p>\n    </form>\n\n    <h2>Bitcoin payments</h2>\n    <ul>\n      " + invoiceDatabase.map(function (item) { return new src_1.Invoice(item); }).map(function (invoice) { return "\n        <li>\n          <a href=\"/invoice/" + invoice.address + "\">" + invoice.message + "</a>\n          <ul>\n            <li><strong>Address:</strong> " + invoice.address + "</li>\n            <li><strong>Amount paid:</strong> " + src_1.Api.satoshiToBitcoin(invoice.getPaidAmount()) + "/" + src_1.Api.satoshiToBitcoin(invoice.dueAmount) + " BTC (" + invoice.getAmountState() + ")</li>\n            <li><strong>State:</strong> " + invoice.getPaymentState() + " (" + invoice.getConfirmationCount() + "/" + config.app.requiredConfirmations + ")</li>\n          </ul>\n        </li>\n      "; }) + "\n    </ul>\n  ");
         return [2 /*return*/];
     });

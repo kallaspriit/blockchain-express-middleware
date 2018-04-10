@@ -57,7 +57,7 @@ exports.default = (function (options) {
     }); });
     // handle payment update request
     router.get("/handle-payment", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
-        var _a, signature, address, transactionHash, value, confirmations, invoiceInfo, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
+        var _a, signature, address, transactionHash, value, confirmations, invoiceInfo, invoice, expectedSignature, isSignatureValid, isAddressValid, isHashValid, isAlreadyComplete, isUpdateValid, previousState, newState, hasSufficientConfirmations, isComplete, responseText;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -79,7 +79,8 @@ exports.default = (function (options) {
                     isSignatureValid = signature === expectedSignature;
                     isAddressValid = invoice.address === address;
                     isHashValid = true;
-                    isUpdateValid = isSignatureValid && isAddressValid && isHashValid;
+                    isAlreadyComplete = invoice.isComplete();
+                    isUpdateValid = isSignatureValid && isAddressValid && isHashValid && !isAlreadyComplete;
                     // respond with bad request if update was not valid
                     if (!isUpdateValid) {
                         // log failing update info
