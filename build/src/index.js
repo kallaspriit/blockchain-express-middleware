@@ -8,4 +8,6 @@ exports.Api = Api_1.default;
 __export(require("./Invoice"));
 var Invoice_1 = require("./Invoice");
 exports.Invoice = Invoice_1.default;
+var middleware_1 = require("./middleware");
+exports.default = middleware_1.default;
 //# sourceMappingURL=index.js.map

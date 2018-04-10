@@ -52,7 +52,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // use the blockchain middleware
-// app.use(blockchainMiddleware());
+app.use(blockchainMiddleware());
 
 // handle index view request
 app.get("/", async (_request, response, _next) => {
