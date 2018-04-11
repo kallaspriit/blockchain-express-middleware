@@ -36,6 +36,7 @@ export default (options: IOptions): express.Router => {
   // handle payment update request
   router.get("/handle-payment", async (request, response, _next) => {
     // TODO: validate request parameters
+    // TODO: ignore the payload and ask https://blockchain.info/rawaddr/ instead?
     const { signature, address, transaction_hash: transactionHash, value, confirmations } = request.query;
     const invoiceInfo = await options.loadInvoice(address);
 

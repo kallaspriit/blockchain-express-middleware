@@ -180,6 +180,23 @@ app.get("/invoice/:address", async (request, response, _next) => {
           )}
         </ul>
       </li>
+      <li>
+        <strong>State transitions:</strong>
+        <ul>
+          ${invoice.stateTransitions.map(
+            (stateTransition, index) => `
+              <li>
+                <strong>State transition #${index + 1}</strong>
+                <ul>
+                  <li><strong>Previous state:</strong> ${stateTransition.previousState}</li>
+                  <li><strong>New state:</strong> ${stateTransition.newState}</li>
+                  <li><strong>Date:</strong> ${stateTransition.date.toISOString()}</li>
+                </ul>
+              </li>
+          `,
+          )}
+        </ul>
+      </li>
     </ul>
 
     <p>

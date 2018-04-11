@@ -9,6 +9,11 @@ export interface ITransaction {
     createdDate: Date;
     updatedDate: Date;
 }
+export interface IStateTransition {
+    previousState: InvoicePaymentState;
+    newState: InvoicePaymentState;
+    date: Date;
+}
 export declare enum InvoicePaymentState {
     PENDING = "PENDING",
     WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
@@ -23,9 +28,10 @@ export interface IInvoice {
     dueAmount: number;
     message: string;
     address: string;
-    transactions: ITransaction[];
     createdDate: Date;
     updatedDate: Date;
+    transactions: ITransaction[];
+    stateTransitions: IStateTransition[];
     paymentState: InvoicePaymentState;
 }
 export declare type InvoiceConstructorInfo = Pick<Invoice, "dueAmount" | "message" | "address">;
@@ -36,6 +42,7 @@ export default class Invoice {
     createdDate: Date;
     updatedDate: Date;
     transactions: ITransaction[];
+    stateTransitions: IStateTransition[];
     private paymentState;
     constructor(info: InvoiceConstructorInfo | IInvoice);
     static getInvoiceSignature(info: IInvoiceSignatureInfo, secret: string): string;

@@ -13,6 +13,12 @@ export interface ITransaction {
   updatedDate: Date;
 }
 
+export interface IStateTransition {
+  previousState: InvoicePaymentState;
+  newState: InvoicePaymentState;
+  date: Date;
+}
+
 interface IArrayMap<T> {
   [x: string]: T[] | undefined;
 }
@@ -51,9 +57,10 @@ export interface IInvoice {
   dueAmount: number;
   message: string;
   address: string;
-  transactions: ITransaction[];
   createdDate: Date;
   updatedDate: Date;
+  transactions: ITransaction[];
+  stateTransitions: IStateTransition[];
   paymentState: InvoicePaymentState;
 }
 
@@ -72,6 +79,7 @@ export default class Invoice {
   public createdDate: Date;
   public updatedDate: Date;
   public transactions: ITransaction[] = [];
+  public stateTransitions: IStateTransition[] = [];
   private paymentState = InvoicePaymentState.PENDING;
 
   public constructor(info: InvoiceConstructorInfo | IInvoice) {
@@ -80,9 +88,10 @@ export default class Invoice {
       this.dueAmount = info.dueAmount;
       this.message = info.message;
       this.address = info.address;
-      this.transactions = info.transactions;
       this.createdDate = info.createdDate;
       this.updatedDate = info.updatedDate;
+      this.transactions = info.transactions;
+      this.stateTransitions = info.stateTransitions;
       this.paymentState = info.paymentState;
     } else {
       // create new interface info otherwise
@@ -202,6 +211,13 @@ export default class Invoice {
       throw new Error(`Invalid state transition from "${this.paymentState}" to "${newState}"`);
     }
 
+    // register the state transition
+    this.stateTransitions.push({
+      previousState: this.paymentState,
+      newState,
+      date: new Date(),
+    });
+
     // update the invoice payment state
     this.paymentState = newState;
     this.updatedDate = new Date();
@@ -247,9 +263,10 @@ export default class Invoice {
       dueAmount: this.dueAmount,
       message: this.message,
       address: this.address,
-      transactions: this.transactions,
       createdDate: this.createdDate,
       updatedDate: this.updatedDate,
+      transactions: this.transactions,
+      stateTransitions: this.stateTransitions,
       paymentState: this.getPaymentState(),
     };
   }

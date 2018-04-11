@@ -34,15 +34,17 @@ function isInvoiceInterface(info) {
 var Invoice = /** @class */ (function () {
     function Invoice(info) {
         this.transactions = [];
+        this.stateTransitions = [];
         this.paymentState = InvoicePaymentState.PENDING;
         if (isInvoiceInterface(info)) {
             // de-serialize if data matching invoice interface is given
             this.dueAmount = info.dueAmount;
             this.message = info.message;
             this.address = info.address;
-            this.transactions = info.transactions;
             this.createdDate = info.createdDate;
             this.updatedDate = info.updatedDate;
+            this.transactions = info.transactions;
+            this.stateTransitions = info.stateTransitions;
             this.paymentState = info.paymentState;
         }
         else {
@@ -134,6 +136,12 @@ var Invoice = /** @class */ (function () {
         if (!this.isValidStateTransition(newState)) {
             throw new Error("Invalid state transition from \"" + this.paymentState + "\" to \"" + newState + "\"");
         }
+        // register the state transition
+        this.stateTransitions.push({
+            previousState: this.paymentState,
+            newState: newState,
+            date: new Date(),
+        });
         // update the invoice payment state
         this.paymentState = newState;
         this.updatedDate = new Date();
@@ -171,9 +179,10 @@ var Invoice = /** @class */ (function () {
             dueAmount: this.dueAmount,
             message: this.message,
             address: this.address,
-            transactions: this.transactions,
             createdDate: this.createdDate,
             updatedDate: this.updatedDate,
+            transactions: this.transactions,
+            stateTransitions: this.stateTransitions,
             paymentState: this.getPaymentState(),
         };
     };
