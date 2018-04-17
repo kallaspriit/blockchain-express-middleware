@@ -1,5 +1,4 @@
-/// <reference types="node" />
-import * as qr from "qr-image";
+import { ILogger } from "./abstract-logger";
 import { Invoice } from "./index";
 /**
  * Base configuration that has reasonable defaults and do no require to be redefined by the user.
@@ -24,36 +23,35 @@ export declare type IBlockchainUserConfig = Partial<IBlockchainBaseConfig> & IBl
  */
 export declare type IBlockchainConfig = IBlockchainBaseConfig & IBlockchainRequiredConfig;
 /**
- * Receiving address response.
+ * Parameters for the generate receiving address endpoint.
  */
-export interface IReceivingAddress {
-    address: string;
-    index: number;
-    callback: string;
-}
 export interface IGenerateReceivingAddressParameters {
     xpub: string;
     callback: string;
     key: string;
     gap_limit?: number;
 }
+/**
+ * Response for the generate receiving address endpoint.
+ */
+export interface IReceivingAddress {
+    address: string;
+    index: number;
+    callback: string;
+}
+/**
+ * Parameters for creating an invoice.
+ */
 export interface ICreateInvoiceInfo {
     dueAmount: number;
     message: string;
     secret: string;
     callbackUrl: string;
 }
-export interface ILog {
-    info(message?: any, ...optionalParams: any[]): void;
-    error(message?: any, ...optionalParams: any[]): void;
-    [x: string]: any;
-}
-export declare const dummyLog: ILog;
 /**
  * Default base configuration.
  */
 export declare const defaultBaseConfig: IBlockchainBaseConfig;
-export declare const BITCOIN_TO_SATOSHI = 100000000;
 /**
  * Provides API for receiving payments through blockchain.info service.
  *
@@ -73,10 +71,19 @@ export default class Api {
      * @param userConfig User configuration (can override base configuration as well)
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
-    constructor(userConfig: IBlockchainUserConfig, log?: ILog);
-    static getPaymentRequestQrCode(address: string, amount: number | string, message: string, options?: Partial<qr.Options>): NodeJS.ReadableStream;
-    static satoshiToBitcoin(microValue: number): number;
-    static bitcoinToSatoshi(value: number | string): number;
+    constructor(userConfig: IBlockchainUserConfig, log?: ILogger);
+    /**
+     * Generates a new receiving address.
+     *
+     * @param callbackUrl URL to call on new transactions and confirmation count changes
+     */
     generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
-    createInvoice(info: ICreateInvoiceInfo): Promise<Invoice>;
+    /**
+     * Creates a new invoice.
+     *
+     * First generates the receiving address and then the invoice.
+     *
+     * @param info Invoice info
+     */
+    createInvoice({dueAmount, message, secret, callbackUrl}: ICreateInvoiceInfo): Promise<Invoice>;
 }

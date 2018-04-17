@@ -1,6 +1,6 @@
 import Axios from "axios";
-import * as qr from "qr-image";
 import * as querystring from "querystring";
+import { dummyLogger, ILogger } from "./abstract-logger";
 import { Invoice } from "./index";
 
 /**
@@ -30,14 +30,8 @@ export type IBlockchainUserConfig = Partial<IBlockchainBaseConfig> & IBlockchain
 export type IBlockchainConfig = IBlockchainBaseConfig & IBlockchainRequiredConfig;
 
 /**
- * Receiving address response.
+ * Parameters for the generate receiving address endpoint.
  */
-export interface IReceivingAddress {
-  address: string;
-  index: number;
-  callback: string;
-}
-
 export interface IGenerateReceivingAddressParameters {
   xpub: string;
   callback: string;
@@ -45,6 +39,18 @@ export interface IGenerateReceivingAddressParameters {
   gap_limit?: number;
 }
 
+/**
+ * Response for the generate receiving address endpoint.
+ */
+export interface IReceivingAddress {
+  address: string;
+  index: number;
+  callback: string;
+}
+
+/**
+ * Parameters for creating an invoice.
+ */
 export interface ICreateInvoiceInfo {
   dueAmount: number;
   message: string;
@@ -52,36 +58,12 @@ export interface ICreateInvoiceInfo {
   callbackUrl: string;
 }
 
-/* tslint:disable:no-any prefer-function-over-method */
-export interface ILog {
-  // trace(message?: any, ...optionalParams: any[]): void;
-  // debug(message?: any, ...optionalParams: any[]): void;
-  info(message?: any, ...optionalParams: any[]): void;
-  // warn(message?: any, ...optionalParams: any[]): void;
-  error(message?: any, ...optionalParams: any[]): void;
-  [x: string]: any;
-}
-
-// dummy log that does not do anything
-export const dummyLog: ILog = {
-  info: (_message?: any, ..._optionalParams: any[]) => {
-    /* dummy */
-  },
-  error: (_message?: any, ..._optionalParams: any[]) => {
-    /* dummy */
-  },
-};
-/* tslint:enable:no-any prefer-function-over-method */
-
 /**
  * Default base configuration.
  */
 export const defaultBaseConfig: IBlockchainBaseConfig = {
   apiBaseUrl: "https://api.blockchain.info/v2/receive",
 };
-
-// one bitcoin in 100 000 000 satoshis
-export const BITCOIN_TO_SATOSHI = 100000000;
 
 /**
  * Provides API for receiving payments through blockchain.info service.
@@ -102,41 +84,18 @@ export default class Api {
    * @param userConfig User configuration (can override base configuration as well)
    * @param log Logger to use (defaults to console, but you can use bunyan etc)
    */
-  public constructor(userConfig: IBlockchainUserConfig, private readonly log: ILog = dummyLog) {
+  public constructor(userConfig: IBlockchainUserConfig, private readonly log: ILogger = dummyLogger) {
     this.config = {
       ...defaultBaseConfig,
       ...userConfig,
     };
   }
 
-  public static getPaymentRequestQrCode(
-    address: string,
-    amount: number | string,
-    message: string,
-    options: Partial<qr.Options> = {},
-  ): NodeJS.ReadableStream {
-    const payload = `bitcoin:${address}?${querystring.stringify({
-      amount: amount.toString(),
-      message,
-    })}`;
-
-    return qr.image(payload, {
-      size: 4,
-      type: "png",
-      ...options,
-    });
-  }
-
-  public static satoshiToBitcoin(microValue: number): number {
-    return microValue / BITCOIN_TO_SATOSHI;
-  }
-
-  public static bitcoinToSatoshi(value: number | string): number {
-    const floatValue = typeof value === "string" ? parseFloat(value) : value;
-
-    return Math.floor(floatValue * BITCOIN_TO_SATOSHI);
-  }
-
+  /**
+   * Generates a new receiving address.
+   *
+   * @param callbackUrl URL to call on new transactions and confirmation count changes
+   */
   public async generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress> {
     const { apiBaseUrl, xPub, apiKey, gapLimit } = this.config;
     const parameters: IGenerateReceivingAddressParameters = {
@@ -184,20 +143,33 @@ export default class Api {
     }
   }
 
-  public async createInvoice(info: ICreateInvoiceInfo): Promise<Invoice> {
+  /**
+   * Creates a new invoice.
+   *
+   * First generates the receiving address and then the invoice.
+   *
+   * @param info Invoice info
+   */
+  public async createInvoice({ dueAmount, message, secret, callbackUrl }: ICreateInvoiceInfo): Promise<Invoice> {
     // build invoice signature to later verify that the handle payment request is valid
-    const signature = Invoice.getInvoiceSignature(info, info.secret);
+    const signature = Invoice.getInvoiceSignature(
+      {
+        dueAmount,
+        message,
+      },
+      secret,
+    );
 
     // build the callback url, containing invoice info signed with the secret
-    const callbackUrl = `${info.callbackUrl}?${querystring.stringify({ signature })}`;
+    const decoratedCallbackUrl = `${callbackUrl}?${querystring.stringify({ signature })}`;
 
     // generate next receiving address
-    const receivingAddress = await this.generateReceivingAddress(callbackUrl);
+    const receivingAddress = await this.generateReceivingAddress(decoratedCallbackUrl);
 
     // create a new invoice
     const invoice = new Invoice({
-      dueAmount: info.dueAmount,
-      message: info.message,
+      dueAmount,
+      message,
       address: receivingAddress.address,
     });
 

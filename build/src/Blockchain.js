@@ -44,35 +44,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
-var qr = require("qr-image");
 var querystring = require("querystring");
+var abstract_logger_1 = require("./abstract-logger");
 var index_1 = require("./index");
-// dummy log that does not do anything
-exports.dummyLog = {
-    info: function (_message) {
-        var _optionalParams = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            _optionalParams[_i - 1] = arguments[_i];
-        }
-        /* dummy */
-    },
-    error: function (_message) {
-        var _optionalParams = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            _optionalParams[_i - 1] = arguments[_i];
-        }
-        /* dummy */
-    },
-};
-/* tslint:enable:no-any prefer-function-over-method */
 /**
  * Default base configuration.
  */
 exports.defaultBaseConfig = {
     apiBaseUrl: "https://api.blockchain.info/v2/receive",
 };
-// one bitcoin in 100 000 000 satoshis
-exports.BITCOIN_TO_SATOSHI = 100000000;
 /**
  * Provides API for receiving payments through blockchain.info service.
  *
@@ -91,25 +71,15 @@ var Api = /** @class */ (function () {
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
     function Api(userConfig, log) {
-        if (log === void 0) { log = exports.dummyLog; }
+        if (log === void 0) { log = abstract_logger_1.dummyLogger; }
         this.log = log;
         this.config = __assign({}, exports.defaultBaseConfig, userConfig);
     }
-    Api.getPaymentRequestQrCode = function (address, amount, message, options) {
-        if (options === void 0) { options = {}; }
-        var payload = "bitcoin:" + address + "?" + querystring.stringify({
-            amount: amount.toString(),
-            message: message,
-        });
-        return qr.image(payload, __assign({ size: 4, type: "png" }, options));
-    };
-    Api.satoshiToBitcoin = function (microValue) {
-        return microValue / exports.BITCOIN_TO_SATOSHI;
-    };
-    Api.bitcoinToSatoshi = function (value) {
-        var floatValue = typeof value === "string" ? parseFloat(value) : value;
-        return Math.floor(floatValue * exports.BITCOIN_TO_SATOSHI);
-    };
+    /**
+     * Generates a new receiving address.
+     *
+     * @param callbackUrl URL to call on new transactions and confirmation count changes
+     */
     Api.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, apiBaseUrl, xPub, apiKey, gapLimit, parameters, url, response, error_1;
@@ -155,20 +125,31 @@ var Api = /** @class */ (function () {
             });
         });
     };
-    Api.prototype.createInvoice = function (info) {
+    /**
+     * Creates a new invoice.
+     *
+     * First generates the receiving address and then the invoice.
+     *
+     * @param info Invoice info
+     */
+    Api.prototype.createInvoice = function (_a) {
+        var dueAmount = _a.dueAmount, message = _a.message, secret = _a.secret, callbackUrl = _a.callbackUrl;
         return __awaiter(this, void 0, void 0, function () {
-            var signature, callbackUrl, receivingAddress, invoice;
-            return __generator(this, function (_a) {
-                switch (_a.label) {
+            var signature, decoratedCallbackUrl, receivingAddress, invoice;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
                     case 0:
-                        signature = index_1.Invoice.getInvoiceSignature(info, info.secret);
-                        callbackUrl = info.callbackUrl + "?" + querystring.stringify({ signature: signature });
-                        return [4 /*yield*/, this.generateReceivingAddress(callbackUrl)];
+                        signature = index_1.Invoice.getInvoiceSignature({
+                            dueAmount: dueAmount,
+                            message: message,
+                        }, secret);
+                        decoratedCallbackUrl = callbackUrl + "?" + querystring.stringify({ signature: signature });
+                        return [4 /*yield*/, this.generateReceivingAddress(decoratedCallbackUrl)];
                     case 1:
-                        receivingAddress = _a.sent();
+                        receivingAddress = _b.sent();
                         invoice = new index_1.Invoice({
-                            dueAmount: info.dueAmount,
-                            message: info.message,
+                            dueAmount: dueAmount,
+                            message: message,
                             address: receivingAddress.address,
                         });
                         return [2 /*return*/, invoice];
@@ -179,4 +160,4 @@ var Api = /** @class */ (function () {
     return Api;
 }());
 exports.default = Api;
-//# sourceMappingURL=Api.js.map
+//# sourceMappingURL=Blockchain.js.map

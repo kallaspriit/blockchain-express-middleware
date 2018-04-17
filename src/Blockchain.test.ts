@@ -1,4 +1,4 @@
-describe("Api", () => {
+describe("Blockchain", () => {
   it("should work", async () => {
     expect(true).toBe(true);
   });

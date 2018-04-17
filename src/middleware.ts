@@ -1,6 +1,6 @@
 import * as express from "express";
 import * as HttpStatus from "http-status-codes";
-import { Api, Invoice, InvoicePaymentState } from "./index";
+import { getPaymentRequestQrCode, Invoice, InvoicePaymentState } from "./index";
 
 export interface IQrCodeParameters {
   address: string;
@@ -27,7 +27,7 @@ export default (options: IOptions): express.Router => {
     // TODO: validate request parameters
     const { address, amount, message } = request.query as IQrCodeParameters;
 
-    const paymentRequestQrCode = Api.getPaymentRequestQrCode(address, amount, message);
+    const paymentRequestQrCode = getPaymentRequestQrCode(address, amount, message);
 
     response.setHeader("Content-Type", "image/png");
     paymentRequestQrCode.pipe(response);

@@ -6,7 +6,7 @@ import * as http from "http";
 import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
-import blockchainMiddleware, { Api, IInvoice, Invoice } from "../src";
+import blockchainMiddleware, { bitcoinToSatoshi, Blockchain, IInvoice, Invoice, satoshiToBitcoin } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -39,7 +39,7 @@ const config = {
 const invoiceDatabase: IInvoice[] = [];
 
 // initiate api
-const api = new Api(config.api);
+const api = new Blockchain(config.api, console);
 
 // create the express server application
 const app = express();
@@ -86,7 +86,7 @@ app.get("/", async (_request, response, _next) => {
           <a href="/invoice/${invoice.address}">${invoice.message}</a>
           <ul>
             <li><strong>Address:</strong> ${invoice.address}</li>
-            <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
+            <li><strong>Amount paid:</strong> ${satoshiToBitcoin(invoice.getPaidAmount())}/${satoshiToBitcoin(
           invoice.dueAmount,
         )} BTC (${invoice.getAmountState()})</li>
             <li><strong>State:</strong> ${invoice.getPaymentState()} (${invoice.getConfirmationCount()}/${
@@ -108,7 +108,7 @@ app.post("/pay", async (request, response, next) => {
   try {
     // create invoice
     const invoice = await api.createInvoice({
-      dueAmount: Api.bitcoinToSatoshi(dueAmount),
+      dueAmount: bitcoinToSatoshi(dueAmount),
       message,
       secret: config.app.secret,
       callbackUrl: getAbsoluteUrl("/payment/handle-payment"),
@@ -139,7 +139,7 @@ app.get("/invoice/:address", async (request, response, _next) => {
   // build qr code url
   const qrCodeParameters = {
     address: invoice.address,
-    amount: Api.satoshiToBitcoin(invoice.dueAmount),
+    amount: satoshiToBitcoin(invoice.dueAmount),
     message: invoice.message,
   };
   const qrCodeUrl = getAbsoluteUrl(`/payment/qr?${querystring.stringify(qrCodeParameters)}`);
@@ -150,7 +150,7 @@ app.get("/invoice/:address", async (request, response, _next) => {
 
     <ul>
       <li><strong>Address:</strong> ${invoice.address}</li>
-      <li><strong>Amount paid:</strong> ${Api.satoshiToBitcoin(invoice.getPaidAmount())}/${Api.satoshiToBitcoin(
+      <li><strong>Amount paid:</strong> ${satoshiToBitcoin(invoice.getPaidAmount())}/${satoshiToBitcoin(
     invoice.dueAmount,
   )} BTC (${invoice.getAmountState()})</li>
       <li><strong>Message:</strong> ${invoice.message}</li>
@@ -168,7 +168,7 @@ app.get("/invoice/:address", async (request, response, _next) => {
                 <strong>Transaction #${index + 1}</strong>
                 <ul>
                   <li><strong>Hash:</strong> ${transaction.hash}</li>
-                  <li><strong>Amount:</strong> ${Api.satoshiToBitcoin(transaction.amount)} BTC</li>
+                  <li><strong>Amount:</strong> ${satoshiToBitcoin(transaction.amount)} BTC</li>
                   <li><strong>Confirmations:</strong> ${transaction.confirmations}/${
               config.app.requiredConfirmations
             }</li>

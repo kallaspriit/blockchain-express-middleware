@@ -49,7 +49,7 @@ exports.default = (function (options) {
         var _a, address, amount, message, paymentRequestQrCode;
         return __generator(this, function (_b) {
             _a = request.query, address = _a.address, amount = _a.amount, message = _a.message;
-            paymentRequestQrCode = index_1.Api.getPaymentRequestQrCode(address, amount, message);
+            paymentRequestQrCode = index_1.getPaymentRequestQrCode(address, amount, message);
             response.setHeader("Content-Type", "image/png");
             paymentRequestQrCode.pipe(response);
             return [2 /*return*/];

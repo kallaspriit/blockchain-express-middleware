@@ -1,3 +1,6 @@
 {
-  "extends": ["tslint-config-strict", "tslint-config-prettier"]
+  "extends": ["tslint-config-strict", "tslint-config-prettier"],
+  "rules": {
+    "jsdoc-format": true
+  }
 }
