@@ -6,13 +6,19 @@
 [![Version](https://img.shields.io/npm/v/blockchain-express-middleware.svg)](http://npm.im/blockchain-express-middleware)
 [![License](https://img.shields.io/npm/l/blockchain-express-middleware.svg)](http://opensource.org/licenses/MIT)
 
-**Express middleware for receiving bitcoin payments using blockchain.info payments receiving API.**
+**Express middleware for receiving bitcoin payments using blockchain.info payments receiving API without any fees.**
 
-- Requires API key and extended public key (xPub).
-- Generates unique payment addresses for each transaction.
-- Displays QR code for payment.
-- Keeps track of payment progress.
+- Generates unique payment addresses for each transaction using [HD wallet](https://medium.com/vault0x/hierarchically-deterministic-wallets-the-concepts-3aa487e71235).
+- Displays payment request QR code with custom message.
+- Provides payment state.
+- Keeps track of state transitions.
+- Supports multiple transactions to a single address.
+- Supports underpayment and overpayment (amount state).
+- Provides a working example express server application.
+- Requires Blockchain.info receive API key and extended public key (xPub).
 - Written in TypeScript, no need for extra typings.
+
+![Example application](https://raw.githubusercontent.com/kallaspriit/blockchain-express-middleware/master/example/screenshot.jpg)
 
 ## Installation
 
@@ -36,6 +42,9 @@ SERVER_KEY=privkey.pem
 
 API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 XPUB=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+APP_SECRET=XWzk3tMcPw8JTGfjZzDHdPKguAhh2Adw
+APP_REQUIRED_CONFIRMATIONS=4
 ```
 
 ## Commands
