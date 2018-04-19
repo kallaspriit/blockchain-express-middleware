@@ -1,6 +1,6 @@
 {
   "name": "blockchain-express-middleware",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Blockchain.info receive payments API express middleware",
   "main": "build/index.js",
   "author": "Stagnation Lab",
