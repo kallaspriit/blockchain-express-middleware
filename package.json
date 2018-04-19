@@ -1,6 +1,6 @@
 {
   "name": "blockchain-express-middleware",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Blockchain.info receive payments API express middleware",
   "main": "build/index.js",
   "author": "Stagnation Lab",
@@ -50,10 +50,19 @@
     "transform": {
       "^.+\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
-    "roots": ["src"],
+    "roots": [
+      "src"
+    ],
     "collectCoverage": false,
-    "collectCoverageFrom": ["src/**/*.ts"],
+    "collectCoverageFrom": [
+      "src/**/*.ts"
+    ],
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
-    "moduleFileExtensions": ["ts", "tsx", "js", "json"]
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ]
   }
 }
