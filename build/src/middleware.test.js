@@ -38,9 +38,11 @@ var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var bodyParser = require("body-parser");
 var express = require("express");
+var HttpStatus = require("http-status-codes");
 var querystring = require("querystring");
 var supertest = require("supertest");
 var _1 = require("./");
+var Blockchain_test_1 = require("./Blockchain.test");
 var SECRET = "zzz";
 var RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
 // invoices "database" emulated with a simple array (store the data only)
@@ -49,6 +51,7 @@ var server;
 // tslint:disable:no-magic-numbers
 describe("middleware", function () {
     beforeEach(function () {
+        // create app
         var app = express();
         // parse application/x-www-form-urlencoded and  application/json
         app.use(bodyParser.urlencoded({ extended: false }));
@@ -61,6 +64,12 @@ describe("middleware", function () {
             loadInvoice: loadInvoice,
         }));
         server = supertest(app);
+    });
+    afterEach(function () {
+        // "clear" the database
+        while (invoiceDatabase.length > 0) {
+            invoiceDatabase.pop();
+        }
     });
     it("should provide qr code rendering", function () { return __awaiter(_this, void 0, void 0, function () {
         var qrCodeParameters, response;
@@ -81,6 +90,210 @@ describe("middleware", function () {
             }
         });
     }); });
+    // TODO: test invalid qr code parameters
+    it("should handle valid payment updates", function () { return __awaiter(_this, void 0, void 0, function () {
+        var invoice, parameters, response1, response2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    invoice = new _1.Invoice({
+                        dueAmount: 10,
+                        message: "Test",
+                        address: RECEIVING_ADDRESS,
+                    });
+                    invoiceDatabase.push(invoice.toJSON());
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 0,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 1:
+                    response1 = _a.sent();
+                    expect(response1.status).toEqual(HttpStatus.OK);
+                    expect(response1.text).toMatchSnapshot();
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    // now has enough confirmations
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 5,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 2:
+                    response2 = _a.sent();
+                    expect(response2.status).toEqual(HttpStatus.OK);
+                    expect(response2.text).toEqual("*ok*");
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should handle invalid invoice address", function () { return __awaiter(_this, void 0, void 0, function () {
+        var invoice, parameters, response;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    expect(invoiceDatabase.length).toEqual(0);
+                    invoice = new _1.Invoice({
+                        dueAmount: 10,
+                        message: "Test",
+                        address: RECEIVING_ADDRESS,
+                    });
+                    invoiceDatabase.push(invoice.toJSON());
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: "foobar",
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 0,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 1:
+                    response = _a.sent();
+                    expect(response.status).toEqual(HttpStatus.OK);
+                    expect(response.text).toEqual("*ok*");
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should ignore invalid update", function () { return __awaiter(_this, void 0, void 0, function () {
+        var invoice, parameters, response;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    invoice = new _1.Invoice({
+                        dueAmount: 10,
+                        message: "Test",
+                        address: RECEIVING_ADDRESS,
+                    });
+                    invoiceDatabase.push(invoice.toJSON());
+                    parameters = {
+                        signature: invoice.getSignature("foobar"),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 0,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 1:
+                    response = _a.sent();
+                    expect(response.status).toEqual(HttpStatus.BAD_REQUEST);
+                    expect(response.text).toMatchSnapshot();
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should fail if update tries to change amount", function () { return __awaiter(_this, void 0, void 0, function () {
+        var invoice, parameters, response1, response2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    invoice = new _1.Invoice({
+                        dueAmount: 10,
+                        message: "Test",
+                        address: RECEIVING_ADDRESS,
+                    });
+                    invoiceDatabase.push(invoice.toJSON());
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 0,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 1:
+                    response1 = _a.sent();
+                    expect(response1.status).toEqual(HttpStatus.OK);
+                    expect(response1.text).toMatchSnapshot();
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    // has new value of 100
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 100,
+                        confirmations: 5,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 2:
+                    response2 = _a.sent();
+                    expect(response2.status).toEqual(HttpStatus.BAD_REQUEST);
+                    expect(response2.text).toMatchSnapshot();
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should ignore updates once already complete", function () { return __awaiter(_this, void 0, void 0, function () {
+        var invoice, parameters, response1, response2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    invoice = new _1.Invoice({
+                        dueAmount: 10,
+                        message: "Test",
+                        address: RECEIVING_ADDRESS,
+                    });
+                    invoiceDatabase.push(invoice.toJSON());
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 5,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 1:
+                    response1 = _a.sent();
+                    expect(response1.status).toEqual(HttpStatus.OK);
+                    expect(response1.text).toEqual("*ok*");
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    // has even more confirmations
+                    parameters = {
+                        signature: invoice.getSignature(SECRET),
+                        address: RECEIVING_ADDRESS,
+                        transaction_hash: "xxx",
+                        value: 10,
+                        confirmations: 10,
+                    };
+                    return [4 /*yield*/, server.get("/payment/handle-payment?" + querystring.stringify(parameters))];
+                case 2:
+                    response2 = _a.sent();
+                    expect(response2.status).toEqual(HttpStatus.OK);
+                    expect(response2.text).toEqual("*ok*");
+                    expect(processInvoicesDatabaseForSnapshot(invoiceDatabase)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should accept custom logger", function () { return __awaiter(_this, void 0, void 0, function () {
+        var mockLogger;
+        return __generator(this, function (_a) {
+            mockLogger = {
+                trace: jest.fn(),
+                debug: jest.fn(),
+                info: jest.fn(),
+                warn: jest.fn(),
+                error: jest.fn(),
+            };
+            _1.default({
+                secret: SECRET,
+                requiredConfirmations: 3,
+                saveInvoice: saveInvoice,
+                loadInvoice: loadInvoice,
+                log: mockLogger,
+            });
+            return [2 /*return*/];
+        });
+    }); });
 });
 function saveInvoice(invoice) {
     return __awaiter(this, void 0, void 0, function () {
@@ -93,10 +306,6 @@ function saveInvoice(invoice) {
             }
             else {
                 invoiceDatabase.push(invoice.toJSON());
-            }
-            // save invoice for complete state is guaranteed to be called only once, ship out the products etc
-            if (invoice.isComplete()) {
-                console.log(invoice, "invoice is now complete");
             }
             return [2 /*return*/];
         });
@@ -115,5 +324,9 @@ function loadInvoice(address) {
             return [2 /*return*/, new _1.Invoice(invoiceInfo)];
         });
     });
+}
+function processInvoicesDatabaseForSnapshot(invoices) {
+    invoices.forEach(Blockchain_test_1.processInvoiceForSnapshot);
+    return invoices;
 }
 //# sourceMappingURL=middleware.test.js.map

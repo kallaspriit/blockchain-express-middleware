@@ -115,5 +115,9 @@ export function processInvoiceForSnapshot<T extends Invoice | IInvoice>(invoice:
     transaction.updatedDate = new Date("2018-04-20T13:48:05.316Z");
   });
 
+  invoice.stateTransitions.forEach(stateTransition => {
+    stateTransition.date = new Date("2018-04-21T13:48:05.316Z");
+  });
+
   return invoice;
 }

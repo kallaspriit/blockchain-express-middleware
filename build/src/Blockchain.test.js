@@ -163,6 +163,9 @@ function processInvoiceForSnapshot(invoice) {
         transaction.createdDate = new Date("2018-04-19T13:48:05.316Z");
         transaction.updatedDate = new Date("2018-04-20T13:48:05.316Z");
     });
+    invoice.stateTransitions.forEach(function (stateTransition) {
+        stateTransition.date = new Date("2018-04-21T13:48:05.316Z");
+    });
     return invoice;
 }
 exports.processInvoiceForSnapshot = processInvoiceForSnapshot;

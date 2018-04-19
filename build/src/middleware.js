@@ -43,6 +43,7 @@ var index_1 = require("./index");
 var OK_RESPONSE = "*ok*";
 var PENDING_RESPONSE = "pending"; // actual value is not important
 exports.default = (function (options) {
+    var log = options.log !== undefined ? options.log : index_1.dummyLogger;
     var router = express.Router();
     // handle qr image request
     router.get("/qr", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {
@@ -67,7 +68,7 @@ exports.default = (function (options) {
                     invoiceInfo = _b.sent();
                     // give up if an invoice with given address could not be found
                     if (!invoiceInfo) {
-                        console.log({
+                        log.info({
                             query: request.query,
                         }, "invoice could not be found");
                         // still send the OK response as we don't want any more updates on this invoice
@@ -83,7 +84,7 @@ exports.default = (function (options) {
                     // respond with bad request if update was not valid
                     if (!isUpdateValid) {
                         // log failing update info
-                        console.warn({
+                        log.warn({
                             query: request.query,
                             info: { signature: signature, address: address, transactionHash: transactionHash, value: value, confirmations: confirmations },
                             invoice: invoice,
@@ -102,11 +103,27 @@ exports.default = (function (options) {
                         return [2 /*return*/];
                     }
                     // adds new transaction or updates an existing one if already exists
-                    invoice.registerTransaction({
-                        hash: transactionHash,
-                        amount: parseInt(value, 10),
-                        confirmations: parseInt(confirmations, 10),
-                    });
+                    try {
+                        invoice.registerTransaction({
+                            hash: transactionHash,
+                            amount: parseInt(value, 10),
+                            confirmations: parseInt(confirmations, 10),
+                        });
+                    }
+                    catch (error) {
+                        log.warn({
+                            query: request.query,
+                            info: { signature: signature, address: address, transactionHash: transactionHash, value: value, confirmations: confirmations },
+                            invoice: invoice,
+                            isSignatureValid: isSignatureValid,
+                            isAddressValid: isAddressValid,
+                            isHashValid: isHashValid,
+                            isUpdateValid: isUpdateValid,
+                        }, "got invalid transaction");
+                        // respond with bad request
+                        response.status(HttpStatus.BAD_REQUEST).send("got bad transaction");
+                        return [2 /*return*/];
+                    }
                     previousState = invoice.getPaymentState();
                     newState = previousState;
                     // check for valid initial states to transition to paid or confirmed state
@@ -122,12 +139,12 @@ exports.default = (function (options) {
                     if (previousState !== index_1.InvoicePaymentState.CONFIRMED && newState === index_1.InvoicePaymentState.CONFIRMED) {
                         // ship out the products etc..
                         // TODO: call some handler
-                        console.log(invoice, "invoice is now confirmed");
+                        log.info(invoice, "invoice is now confirmed");
                     }
                     isComplete = invoice.isComplete();
                     responseText = isComplete ? OK_RESPONSE : PENDING_RESPONSE;
                     // log the request info
-                    console.log({
+                    log.info({
                         query: request.query,
                         info: { signature: signature, address: address, transactionHash: transactionHash, value: value, confirmations: confirmations },
                         invoice: invoice,

@@ -1,6 +1,6 @@
 /// <reference types="express" />
 import * as express from "express";
-import { Invoice } from "./index";
+import { ILogger, Invoice } from "./index";
 export interface IQrCodeParameters {
     address: string;
     amount: number | string;
@@ -9,6 +9,7 @@ export interface IQrCodeParameters {
 export interface IOptions {
     secret: string;
     requiredConfirmations: number;
+    log?: ILogger;
     saveInvoice(invoice: Invoice): Promise<void>;
     loadInvoice(address: string): Promise<Invoice | undefined>;
 }
