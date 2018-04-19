@@ -55,3 +55,4 @@ APP_REQUIRED_CONFIRMATIONS=4
 - `yarn coverage` to gather code coverage.
 - `yarn lint` to lint the codebase.
 - `yarn prettier` to run prettier.
+- `yarn audit` to run all pre-commit checks (prettier, build, lint, test)

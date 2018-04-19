@@ -35,7 +35,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var _this = this;
-describe("Api", function () {
+describe("Blockchain", function () {
     it("should work", function () { return __awaiter(_this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             expect(true).toBe(true);
