@@ -1,6 +1,8 @@
 "use strict";
+// TODO: create a npm library
 Object.defineProperty(exports, "__esModule", { value: true });
 // dummy log that does not do anything
+/* istanbul ignore next */
 exports.dummyLogger = {
     trace: function (_message) {
         var _optionalParams = [];

@@ -61,7 +61,7 @@ exports.defaultBaseConfig = {
  *
  * See https://blockchain.info/api/api_receive for API documentation.
  */
-var Api = /** @class */ (function () {
+var Blockchain = /** @class */ (function () {
     /**
      * Constructor.
      *
@@ -70,7 +70,7 @@ var Api = /** @class */ (function () {
      * @param userConfig User configuration (can override base configuration as well)
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
-    function Api(userConfig, log) {
+    function Blockchain(userConfig, log) {
         if (log === void 0) { log = abstract_logger_1.dummyLogger; }
         this.log = log;
         this.config = __assign({}, exports.defaultBaseConfig, userConfig);
@@ -80,7 +80,7 @@ var Api = /** @class */ (function () {
      *
      * @param callbackUrl URL to call on new transactions and confirmation count changes
      */
-    Api.prototype.generateReceivingAddress = function (callbackUrl) {
+    Blockchain.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {
             var _a, apiBaseUrl, xPub, apiKey, gapLimit, parameters, url, response, error_1;
             return __generator(this, function (_b) {
@@ -132,7 +132,7 @@ var Api = /** @class */ (function () {
      *
      * @param info Invoice info
      */
-    Api.prototype.createInvoice = function (_a) {
+    Blockchain.prototype.createInvoice = function (_a) {
         var dueAmount = _a.dueAmount, message = _a.message, secret = _a.secret, callbackUrl = _a.callbackUrl;
         return __awaiter(this, void 0, void 0, function () {
             var signature, decoratedCallbackUrl, receivingAddress, invoice;
@@ -157,7 +157,7 @@ var Api = /** @class */ (function () {
             });
         });
     };
-    return Api;
+    return Blockchain;
 }());
-exports.default = Api;
+exports.default = Blockchain;
 //# sourceMappingURL=Blockchain.js.map

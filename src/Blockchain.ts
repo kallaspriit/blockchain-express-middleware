@@ -73,7 +73,7 @@ export const defaultBaseConfig: IBlockchainBaseConfig = {
  *
  * See https://blockchain.info/api/api_receive for API documentation.
  */
-export default class Api {
+export default class Blockchain {
   private readonly config: IBlockchainConfig;
 
   /**

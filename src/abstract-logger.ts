@@ -1,3 +1,5 @@
+// TODO: create a npm library
+
 /* tslint:disable:no-any prefer-function-over-method */
 export interface ILogger {
   trace(message?: any, ...optionalParams: any[]): void;
@@ -9,6 +11,7 @@ export interface ILogger {
 }
 
 // dummy log that does not do anything
+/* istanbul ignore next */
 export const dummyLogger: ILogger = {
   trace: (_message?: any, ..._optionalParams: any[]) => {
     /* dummy */

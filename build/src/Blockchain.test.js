@@ -35,12 +35,130 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 var _this = this;
+Object.defineProperty(exports, "__esModule", { value: true });
+var axios_1 = require("axios");
+var axios_mock_adapter_1 = require("axios-mock-adapter");
+var HttpStatus = require("http-status-codes");
+var _1 = require("./");
+var CALLBACK_URL = "https://example.com";
+var RECEIVING_ADDRESS = "1FupTEd3PDF7HVxNrzNqQGGoWZA4rwiphq";
+var API_KEY = "xxx";
+var XPUB = "yyy";
+var SECRET = "zzz";
+var mockServer;
 describe("Blockchain", function () {
-    it("should work", function () { return __awaiter(_this, void 0, void 0, function () {
+    beforeEach(function () {
+        mockServer = new axios_mock_adapter_1.default(axios_1.default);
+    });
+    afterEach(function () {
+        mockServer.restore();
+    });
+    it("should generate a new receiving address", function () { return __awaiter(_this, void 0, void 0, function () {
+        var blockchain, receivingAddress;
         return __generator(this, function (_a) {
-            expect(true).toBe(true);
-            return [2 /*return*/];
+            switch (_a.label) {
+                case 0:
+                    mockServer.onGet(/receive/).reply(HttpStatus.OK, {
+                        address: RECEIVING_ADDRESS,
+                        index: 0,
+                        callback: CALLBACK_URL,
+                    });
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                    });
+                    return [4 /*yield*/, blockchain.generateReceivingAddress(CALLBACK_URL)];
+                case 1:
+                    receivingAddress = _a.sent();
+                    expect(receivingAddress).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should throw error when generating receving address and getting a non 2xx response", function () { return __awaiter(_this, void 0, void 0, function () {
+        var blockchain;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    mockServer.onGet(/receive/).reply(HttpStatus.BAD_REQUEST, "Bad request");
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                        gapLimit: 20,
+                    });
+                    return [4 /*yield*/, expect(blockchain.generateReceivingAddress(CALLBACK_URL)).rejects.toMatchSnapshot()];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should create a new invoice with receiving address", function () { return __awaiter(_this, void 0, void 0, function () {
+        var blockchain, invoice;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    mockServer.onGet(/receive/).reply(HttpStatus.OK, {
+                        address: RECEIVING_ADDRESS,
+                        index: 0,
+                        callback: CALLBACK_URL,
+                    });
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                    });
+                    return [4 /*yield*/, blockchain.createInvoice({
+                            dueAmount: 1,
+                            message: "Test invoice",
+                            secret: SECRET,
+                            callbackUrl: CALLBACK_URL,
+                        })];
+                case 1:
+                    invoice = _a.sent();
+                    expect(processInvoiceForSnapshot(invoice)).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should accept custom logger", function () { return __awaiter(_this, void 0, void 0, function () {
+        var mockLogger, blockchain;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    mockServer.onGet(/receive/).reply(HttpStatus.OK, {
+                        address: RECEIVING_ADDRESS,
+                        index: 0,
+                        callback: CALLBACK_URL,
+                    });
+                    mockLogger = {
+                        trace: jest.fn(),
+                        debug: jest.fn(),
+                        info: jest.fn(),
+                        warn: jest.fn(),
+                        error: jest.fn(),
+                    };
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                    }, mockLogger);
+                    return [4 /*yield*/, blockchain.createInvoice({
+                            dueAmount: 2.5,
+                            message: "Another invoice",
+                            secret: SECRET,
+                            callbackUrl: CALLBACK_URL,
+                        })];
+                case 1:
+                    _a.sent();
+                    // tslint:disable-next-line:no-any
+                    expect(mockLogger.info.mock.calls).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
         });
     }); });
 });
+function processInvoiceForSnapshot(invoice) {
+    invoice.createdDate = new Date("2018-04-19T13:48:05.316Z");
+    invoice.updatedDate = new Date("2018-04-19T13:48:05.316Z");
+    return invoice;
+}
 //# sourceMappingURL=Blockchain.test.js.map
