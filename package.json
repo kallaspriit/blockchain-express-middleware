@@ -1,6 +1,6 @@
 {
   "name": "blockchain-express-middleware",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Blockchain.info receive payments API express middleware",
   "main": "build/index.js",
   "author": "Stagnation Lab",
@@ -11,13 +11,14 @@
     "production": "node build/example/index",
     "lint": "tslint --project tsconfig.json --format codeFrame",
     "lint-fix": "yarn lint --fix",
-    "prettier": "prettier --write src/**/*.ts",
+    "prettier": "prettier --write src/**/*.ts example/**/*.ts",
     "tidy": "yarn tidy:build && yarn tidy:coverage",
     "tidy:build": "rimraf build",
     "tidy:coverage": "rimraf coverage",
     "test": "jest",
     "test-watch": "jest --watch --collectCoverage",
     "coverage": "yarn tidy:coverage && jest --collectCoverage",
+    "audit": "yarn prettier && yarn build && yarn lint && yarn test",
     "coveralls": "cat ./coverage/lcov.info | coveralls"
   },
   "dependencies": {
