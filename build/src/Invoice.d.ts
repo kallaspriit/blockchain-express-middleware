@@ -57,6 +57,10 @@ export interface IInvoice {
  */
 export declare type InvoiceConstructorInfo = Pick<Invoice, "dueAmount" | "message" | "address">;
 /**
+ * Omit keys from interface.
+ */
+export declare type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+/**
  * Represents an invoice.
  *
  * Note that the invoice expects amounts in satoshis.
@@ -131,7 +135,7 @@ export default class Invoice {
      *
      * @param transaction Transaction info
      */
-    registerTransaction(transaction: ITransaction): void;
+    registerTransaction(transaction: Omit<ITransaction, "createdDate" | "updatedDate">): void;
     /**
      * Returns invoice paid amount.
      *

@@ -18,7 +18,7 @@
     "test": "jest",
     "test-watch": "jest --watch --collectCoverage",
     "coverage": "yarn tidy:coverage && jest --collectCoverage",
-    "audit": "yarn prettier && yarn build && yarn lint && yarn test",
+    "audit": "yarn prettier && yarn build && yarn lint && yarn coverage",
     "coveralls": "cat ./coverage/lcov.info | coveralls"
   },
   "dependencies": {
@@ -50,19 +50,10 @@
     "transform": {
       "^.+\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
-    "roots": [
-      "src"
-    ],
+    "roots": ["src"],
     "collectCoverage": false,
-    "collectCoverageFrom": [
-      "src/**/*.ts"
-    ],
+    "collectCoverageFrom": ["src/**/*.ts"],
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "json"
-    ]
+    "moduleFileExtensions": ["ts", "tsx", "js", "json"]
   }
 }

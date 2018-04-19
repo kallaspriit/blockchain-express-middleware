@@ -1,4 +1,12 @@
 "use strict";
+var __assign = (this && this.__assign) || Object.assign || function(t) {
+    for (var s, i = 1, n = arguments.length; i < n; i++) {
+        s = arguments[i];
+        for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+            t[p] = s[p];
+    }
+    return t;
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var crypto_1 = require("crypto");
 /**
@@ -149,7 +157,7 @@ var Invoice = /** @class */ (function () {
             return;
         }
         // transaction does not exist, add a new one
-        this.transactions.push(transaction);
+        this.transactions.push(__assign({}, transaction, { createdDate: new Date(), updatedDate: new Date() }));
     };
     /**
      * Returns invoice paid amount.

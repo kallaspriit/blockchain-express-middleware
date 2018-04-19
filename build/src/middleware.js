@@ -106,8 +106,6 @@ exports.default = (function (options) {
                         hash: transactionHash,
                         amount: parseInt(value, 10),
                         confirmations: parseInt(confirmations, 10),
-                        createdDate: new Date(),
-                        updatedDate: new Date(),
                     });
                     previousState = invoice.getPaymentState();
                     newState = previousState;

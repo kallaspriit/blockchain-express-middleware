@@ -101,8 +101,6 @@ export default (options: IOptions): express.Router => {
       hash: transactionHash,
       amount: parseInt(value, 10),
       confirmations: parseInt(confirmations, 10),
-      createdDate: new Date(),
-      updatedDate: new Date(),
     });
 
     // remember previous state and resolve new state

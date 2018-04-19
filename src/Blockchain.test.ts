@@ -1,10 +1,10 @@
 import Axios from "axios";
 import MockServer from "axios-mock-adapter";
 import * as HttpStatus from "http-status-codes";
-import { Blockchain, ILogger, Invoice } from "./";
+import { Blockchain, IInvoice, ILogger, Invoice } from "./";
 
 const CALLBACK_URL = "https://example.com";
-const RECEIVING_ADDRESS = "1FupTEd3PDF7HVxNrzNqQGGoWZA4rwiphq";
+const RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
 const API_KEY = "xxx";
 const XPUB = "yyy";
 const SECRET = "zzz";
@@ -106,9 +106,14 @@ describe("Blockchain", () => {
   });
 });
 
-function processInvoiceForSnapshot(invoice: Invoice): Invoice {
+export function processInvoiceForSnapshot<T extends Invoice | IInvoice>(invoice: T): T {
   invoice.createdDate = new Date("2018-04-19T13:48:05.316Z");
-  invoice.updatedDate = new Date("2018-04-19T13:48:05.316Z");
+  invoice.updatedDate = new Date("2018-04-20T13:48:05.316Z");
+
+  invoice.transactions.forEach(transaction => {
+    transaction.createdDate = new Date("2018-04-19T13:48:05.316Z");
+    transaction.updatedDate = new Date("2018-04-20T13:48:05.316Z");
+  });
 
   return invoice;
 }

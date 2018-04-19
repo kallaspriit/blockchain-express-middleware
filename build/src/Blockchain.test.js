@@ -41,7 +41,7 @@ var axios_mock_adapter_1 = require("axios-mock-adapter");
 var HttpStatus = require("http-status-codes");
 var _1 = require("./");
 var CALLBACK_URL = "https://example.com";
-var RECEIVING_ADDRESS = "1FupTEd3PDF7HVxNrzNqQGGoWZA4rwiphq";
+var RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
 var API_KEY = "xxx";
 var XPUB = "yyy";
 var SECRET = "zzz";
@@ -158,7 +158,12 @@ describe("Blockchain", function () {
 });
 function processInvoiceForSnapshot(invoice) {
     invoice.createdDate = new Date("2018-04-19T13:48:05.316Z");
-    invoice.updatedDate = new Date("2018-04-19T13:48:05.316Z");
+    invoice.updatedDate = new Date("2018-04-20T13:48:05.316Z");
+    invoice.transactions.forEach(function (transaction) {
+        transaction.createdDate = new Date("2018-04-19T13:48:05.316Z");
+        transaction.updatedDate = new Date("2018-04-20T13:48:05.316Z");
+    });
     return invoice;
 }
+exports.processInvoiceForSnapshot = processInvoiceForSnapshot;
 //# sourceMappingURL=Blockchain.test.js.map

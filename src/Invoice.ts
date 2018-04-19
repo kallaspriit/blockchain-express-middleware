@@ -80,6 +80,11 @@ interface IArrayMap<T> {
 }
 
 /**
+ * Omit keys from interface.
+ */
+export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
+
+/**
  * Represents an invoice.
  *
  * Note that the invoice expects amounts in satoshis.
@@ -226,7 +231,7 @@ export default class Invoice {
    *
    * @param transaction Transaction info
    */
-  public registerTransaction(transaction: ITransaction) {
+  public registerTransaction(transaction: Omit<ITransaction, "createdDate" | "updatedDate">) {
     // update updated date
     this.updatedDate = new Date();
 
@@ -252,7 +257,11 @@ export default class Invoice {
     }
 
     // transaction does not exist, add a new one
-    this.transactions.push(transaction);
+    this.transactions.push({
+      ...transaction,
+      createdDate: new Date(),
+      updatedDate: new Date(),
+    });
   }
 
   /**

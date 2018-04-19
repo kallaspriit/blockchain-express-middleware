@@ -18,20 +18,20 @@ Array [
 
 exports[`Blockchain should create a new invoice with receiving address 1`] = `
 Object {
-  "address": "1FupTEd3PDF7HVxNrzNqQGGoWZA4rwiphq",
+  "address": "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq",
   "createdDate": 2018-04-19T13:48:05.316Z,
   "dueAmount": 1,
   "message": "Test invoice",
   "paymentState": "PENDING",
   "stateTransitions": Array [],
   "transactions": Array [],
-  "updatedDate": 2018-04-19T13:48:05.316Z,
+  "updatedDate": 2018-04-20T13:48:05.316Z,
 }
 `;
 
 exports[`Blockchain should generate a new receiving address 1`] = `
 Object {
-  "address": "1FupTEd3PDF7HVxNrzNqQGGoWZA4rwiphq",
+  "address": "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq",
   "callback": "https://example.com",
   "index": 0,
 }
