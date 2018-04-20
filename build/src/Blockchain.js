@@ -45,7 +45,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
 var querystring = require("querystring");
-var abstract_logger_1 = require("./abstract-logger");
+var ts_log_1 = require("ts-log");
 var index_1 = require("./index");
 /**
  * Default base configuration.
@@ -71,7 +71,7 @@ var Blockchain = /** @class */ (function () {
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
     function Blockchain(userConfig, log) {
-        if (log === void 0) { log = abstract_logger_1.dummyLogger; }
+        if (log === void 0) { log = ts_log_1.dummyLogger; }
         this.log = log;
         this.config = __assign({}, exports.defaultBaseConfig, userConfig);
     }

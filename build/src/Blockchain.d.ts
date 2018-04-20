@@ -1,4 +1,4 @@
-import { ILogger } from "./abstract-logger";
+import { ILogger } from "ts-log";
 import { Invoice } from "./index";
 /**
  * Base configuration that has reasonable defaults and do no require to be redefined by the user.

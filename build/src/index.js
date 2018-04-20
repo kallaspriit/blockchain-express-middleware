@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 // export all public modules
 __export(require("./Invoice"));
 __export(require("./Blockchain"));
-__export(require("./abstract-logger"));
 var Blockchain_1 = require("./Blockchain");
 exports.Blockchain = Blockchain_1.default;
 var Invoice_1 = require("./Invoice");

@@ -38,12 +38,13 @@ var _this = this;
 Object.defineProperty(exports, "__esModule", { value: true });
 var express = require("express");
 var HttpStatus = require("http-status-codes");
+var ts_log_1 = require("ts-log");
 var index_1 = require("./index");
 // private constants
 var OK_RESPONSE = "*ok*";
 var PENDING_RESPONSE = "pending"; // actual value is not important
 exports.default = (function (options) {
-    var log = options.log !== undefined ? options.log : index_1.dummyLogger;
+    var log = options.log !== undefined ? options.log : ts_log_1.dummyLogger;
     var router = express.Router();
     // handle qr image request
     router.get("/qr", function (request, response, _next) { return __awaiter(_this, void 0, void 0, function () {

@@ -1,6 +1,7 @@
 import * as express from "express";
 import * as HttpStatus from "http-status-codes";
-import { dummyLogger, getPaymentRequestQrCode, ILogger, Invoice, InvoicePaymentState } from "./index";
+import { dummyLogger, ILogger } from "ts-log";
+import { getPaymentRequestQrCode, Invoice, InvoicePaymentState } from "./index";
 
 export interface IQrCodeParameters {
   address: string;

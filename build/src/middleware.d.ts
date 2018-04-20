@@ -1,6 +1,7 @@
 /// <reference types="express" />
 import * as express from "express";
-import { ILogger, Invoice } from "./index";
+import { ILogger } from "ts-log";
+import { Invoice } from "./index";
 export interface IQrCodeParameters {
     address: string;
     amount: number | string;

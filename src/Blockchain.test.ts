@@ -1,7 +1,8 @@
 import Axios from "axios";
 import MockServer from "axios-mock-adapter";
 import * as HttpStatus from "http-status-codes";
-import { Blockchain, IInvoice, ILogger, Invoice } from "./";
+import { ILogger } from "ts-log";
+import { Blockchain, IInvoice, Invoice } from "./";
 
 const CALLBACK_URL = "https://example.com";
 const RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";

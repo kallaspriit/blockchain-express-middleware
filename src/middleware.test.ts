@@ -3,7 +3,8 @@ import * as express from "express";
 import * as HttpStatus from "http-status-codes";
 import * as querystring from "querystring";
 import * as supertest from "supertest";
-import blockchainMiddleware, { IInvoice, ILogger, Invoice } from "./";
+import { ILogger } from "ts-log";
+import blockchainMiddleware, { IInvoice, Invoice } from "./";
 import { processInvoiceForSnapshot } from "./Blockchain.test";
 
 const SECRET = "zzz";

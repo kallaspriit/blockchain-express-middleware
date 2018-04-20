@@ -1,6 +1,6 @@
 import Axios from "axios";
 import * as querystring from "querystring";
-import { dummyLogger, ILogger } from "./abstract-logger";
+import { dummyLogger, ILogger } from "ts-log";
 import { Invoice } from "./index";
 
 /**
