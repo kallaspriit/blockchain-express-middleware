@@ -40,21 +40,54 @@ var index_1 = require("./index");
 var RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
 // tslint:disable:no-magic-numbers
 describe("getPaymentRequestQrCode", function () {
-    it("should return correct image", function (done) { return __awaiter(_this, void 0, void 0, function () {
-        var image, result;
-        return __generator(this, function (_a) {
-            image = index_1.getPaymentRequestQrCode(RECEIVING_ADDRESS, 100, "Test message");
-            result = "";
-            image.on("data", function (chunk) {
-                result += chunk;
-            });
-            image.on("end", function () {
-                // can't really say it's correct but at least detect a change
-                expect(result).toMatchSnapshot();
-                done();
-            });
-            return [2 /*return*/];
+    it("should return correct image", function () { return __awaiter(_this, void 0, void 0, function () {
+        var image, _a;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    image = index_1.getPaymentRequestQrCode(RECEIVING_ADDRESS, 100, "Test message");
+                    // can't really say it's correct but at least detect a change
+                    _a = expect;
+                    return [4 /*yield*/, streamToString(image)];
+                case 1:
+                    // can't really say it's correct but at least detect a change
+                    _a.apply(void 0, [_b.sent()]).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should accept optional qr code options", function () { return __awaiter(_this, void 0, void 0, function () {
+        var image, _a;
+        return __generator(this, function (_b) {
+            switch (_b.label) {
+                case 0:
+                    image = index_1.getPaymentRequestQrCode(RECEIVING_ADDRESS, 100, "Test message", {
+                        size: 10,
+                    });
+                    // can't really say it's correct but at least detect a change
+                    _a = expect;
+                    return [4 /*yield*/, streamToString(image)];
+                case 1:
+                    // can't really say it's correct but at least detect a change
+                    _a.apply(void 0, [_b.sent()]).toMatchSnapshot();
+                    return [2 /*return*/];
+            }
         });
     }); });
 });
+function streamToString(stream) {
+    return __awaiter(this, void 0, void 0, function () {
+        return __generator(this, function (_a) {
+            return [2 /*return*/, new Promise(function (resolve) {
+                    var result = "";
+                    stream.on("data", function (chunk) {
+                        result += chunk;
+                    });
+                    stream.on("end", function () {
+                        resolve(result);
+                    });
+                })];
+        });
+    });
+}
 //# sourceMappingURL=getPaymentRequestQrCode.test.js.map

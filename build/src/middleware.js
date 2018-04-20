@@ -126,13 +126,11 @@ exports.default = (function (options) {
                     }
                     previousState = invoice.getPaymentState();
                     newState = previousState;
-                    // check for valid initial states to transition to paid or confirmed state
-                    if ([index_1.InvoicePaymentState.PENDING, index_1.InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
-                        hasSufficientConfirmations = invoice.hasSufficientConfirmations(options.requiredConfirmations);
-                        newState = hasSufficientConfirmations
-                            ? index_1.InvoicePaymentState.CONFIRMED
-                            : index_1.InvoicePaymentState.WAITING_FOR_CONFIRMATION;
-                    }
+                    hasSufficientConfirmations = invoice.hasSufficientConfirmations(options.requiredConfirmations);
+                    // resolve new state
+                    newState = hasSufficientConfirmations
+                        ? index_1.InvoicePaymentState.CONFIRMED
+                        : index_1.InvoicePaymentState.WAITING_FOR_CONFIRMATION;
                     // update invoice payment state
                     invoice.setPaymentState(newState);
                     // check whether invoice was just paid

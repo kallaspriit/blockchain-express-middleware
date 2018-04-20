@@ -21,7 +21,7 @@ describe("getPaymentRequestQrCode", () => {
   });
 });
 
-function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
+async function streamToString(stream: NodeJS.ReadableStream): Promise<string> {
   return new Promise<string>(resolve => {
     let result = "";
 
