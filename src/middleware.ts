@@ -128,14 +128,13 @@ export default (options: IOptions): express.Router => {
     const previousState = invoice.getPaymentState();
     let newState = previousState;
 
-    // check for valid initial states to transition to paid or confirmed state
-    if ([InvoicePaymentState.PENDING, InvoicePaymentState.WAITING_FOR_CONFIRMATION].indexOf(previousState) !== -1) {
-      const hasSufficientConfirmations = invoice.hasSufficientConfirmations(options.requiredConfirmations);
+    // check whether we have enough confirmations
+    const hasSufficientConfirmations = invoice.hasSufficientConfirmations(options.requiredConfirmations);
 
-      newState = hasSufficientConfirmations
-        ? InvoicePaymentState.CONFIRMED
-        : InvoicePaymentState.WAITING_FOR_CONFIRMATION;
-    }
+    // resolve new state
+    newState = hasSufficientConfirmations
+      ? InvoicePaymentState.CONFIRMED
+      : InvoicePaymentState.WAITING_FOR_CONFIRMATION;
 
     // update invoice payment state
     invoice.setPaymentState(newState);
