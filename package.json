@@ -3,6 +3,7 @@
   "version": "1.2.11",
   "description": "Blockchain.info receive payments API express middleware",
   "main": "build/src/index.js",
+  "repository": "git@github.com:kallaspriit/blockchain-express-middleware.git",
   "types": "build/src/index.d.ts",
   "author": "Stagnation Lab",
   "license": "MIT",
@@ -56,19 +57,10 @@
     "transform": {
       "^.+\\.(ts|tsx)$": "<rootDir>/node_modules/ts-jest/preprocessor.js"
     },
-    "roots": [
-      "src"
-    ],
+    "roots": ["src"],
     "collectCoverage": false,
-    "collectCoverageFrom": [
-      "src/**/*.ts"
-    ],
+    "collectCoverageFrom": ["src/**/*.ts"],
     "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "json"
-    ]
+    "moduleFileExtensions": ["ts", "tsx", "js", "json"]
   }
 }
