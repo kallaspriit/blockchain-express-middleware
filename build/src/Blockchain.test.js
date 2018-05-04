@@ -84,7 +84,6 @@ describe("Blockchain", function () {
                     blockchain = new _1.Blockchain({
                         apiKey: API_KEY,
                         xPub: XPUB,
-                        gapLimit: 20,
                     });
                     return [4 /*yield*/, expect(blockchain.generateReceivingAddress(CALLBACK_URL)).rejects.toMatchSnapshot()];
                 case 1:

@@ -4,30 +4,13 @@ import { dummyLogger, ILogger } from "ts-log";
 import { Invoice } from "./index";
 
 /**
- * Base configuration that has reasonable defaults and do no require to be redefined by the user.
- */
-export interface IBlockchainBaseConfig {
-  apiBaseUrl: string;
-  gapLimit?: number;
-}
-
-/**
- * Configuration required to be provided by the user.
- */
-export interface IBlockchainRequiredConfig {
-  apiKey: string;
-  xPub: string;
-}
-
-/**
- * Configuration that the user provides, includes mandatory user configuration and optional base configuration.
- */
-export type IBlockchainUserConfig = Partial<IBlockchainBaseConfig> & IBlockchainRequiredConfig;
-
-/**
  * Combined configuration including base and user provided configurations.
  */
-export type IBlockchainConfig = IBlockchainBaseConfig & IBlockchainRequiredConfig;
+export interface IBlockchainConfig {
+  apiKey: string;
+  xPub: string;
+  apiBaseUrl?: string;
+}
 
 /**
  * Parameters for the generate receiving address endpoint.
@@ -36,7 +19,6 @@ export interface IGenerateReceivingAddressParameters {
   xpub: string;
   callback: string;
   key: string;
-  gap_limit?: number;
 }
 
 /**
@@ -59,13 +41,6 @@ export interface ICreateInvoiceInfo {
 }
 
 /**
- * Default base configuration.
- */
-export const defaultBaseConfig: IBlockchainBaseConfig = {
-  apiBaseUrl: "https://api.blockchain.info/v2/receive",
-};
-
-/**
  * Provides API for receiving payments through blockchain.info service.
  *
  * To get the extended public key (xPub), copy your mnemonic words to http://bip32.org/ "Passphrase" field, wait for it
@@ -74,7 +49,7 @@ export const defaultBaseConfig: IBlockchainBaseConfig = {
  * See https://blockchain.info/api/api_receive for API documentation.
  */
 export default class Blockchain {
-  private readonly config: IBlockchainConfig;
+  private readonly config: Required<IBlockchainConfig>;
 
   /**
    * Constructor.
@@ -84,9 +59,9 @@ export default class Blockchain {
    * @param userConfig User configuration (can override base configuration as well)
    * @param log Logger to use (defaults to console, but you can use bunyan etc)
    */
-  public constructor(userConfig: IBlockchainUserConfig, private readonly log: ILogger = dummyLogger) {
+  public constructor(userConfig: IBlockchainConfig, private readonly log: ILogger = dummyLogger) {
     this.config = {
-      ...defaultBaseConfig,
+      apiBaseUrl: "https://api.blockchain.info/v2/receive",
       ...userConfig,
     };
   }
@@ -97,17 +72,12 @@ export default class Blockchain {
    * @param callbackUrl URL to call on new transactions and confirmation count changes
    */
   public async generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress> {
-    const { apiBaseUrl, xPub, apiKey, gapLimit } = this.config;
+    const { apiBaseUrl, xPub, apiKey } = this.config;
     const parameters: IGenerateReceivingAddressParameters = {
       xpub: xPub,
       callback: callbackUrl,
       key: apiKey,
     };
-
-    // only add the gap limit parameters if it has been set
-    if (gapLimit !== undefined) {
-      parameters.gap_limit = gapLimit;
-    }
 
     // build the request url
     const url = `${apiBaseUrl}?${querystring.stringify(parameters)}`;

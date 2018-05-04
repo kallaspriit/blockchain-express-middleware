@@ -48,12 +48,6 @@ var querystring = require("querystring");
 var ts_log_1 = require("ts-log");
 var index_1 = require("./index");
 /**
- * Default base configuration.
- */
-exports.defaultBaseConfig = {
-    apiBaseUrl: "https://api.blockchain.info/v2/receive",
-};
-/**
  * Provides API for receiving payments through blockchain.info service.
  *
  * To get the extended public key (xPub), copy your mnemonic words to http://bip32.org/ "Passphrase" field, wait for it
@@ -73,7 +67,7 @@ var Blockchain = /** @class */ (function () {
     function Blockchain(userConfig, log) {
         if (log === void 0) { log = ts_log_1.dummyLogger; }
         this.log = log;
-        this.config = __assign({}, exports.defaultBaseConfig, userConfig);
+        this.config = __assign({ apiBaseUrl: "https://api.blockchain.info/v2/receive" }, userConfig);
     }
     /**
      * Generates a new receiving address.
@@ -82,20 +76,16 @@ var Blockchain = /** @class */ (function () {
      */
     Blockchain.prototype.generateReceivingAddress = function (callbackUrl) {
         return __awaiter(this, void 0, void 0, function () {
-            var _a, apiBaseUrl, xPub, apiKey, gapLimit, parameters, url, response, error_1;
+            var _a, apiBaseUrl, xPub, apiKey, parameters, url, response, error_1;
             return __generator(this, function (_b) {
                 switch (_b.label) {
                     case 0:
-                        _a = this.config, apiBaseUrl = _a.apiBaseUrl, xPub = _a.xPub, apiKey = _a.apiKey, gapLimit = _a.gapLimit;
+                        _a = this.config, apiBaseUrl = _a.apiBaseUrl, xPub = _a.xPub, apiKey = _a.apiKey;
                         parameters = {
                             xpub: xPub,
                             callback: callbackUrl,
                             key: apiKey,
                         };
-                        // only add the gap limit parameters if it has been set
-                        if (gapLimit !== undefined) {
-                            parameters.gap_limit = gapLimit;
-                        }
                         url = apiBaseUrl + "?" + querystring.stringify(parameters);
                         this.log.info({
                             parameters: parameters,

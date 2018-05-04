@@ -44,7 +44,6 @@ describe("Blockchain", () => {
     const blockchain = new Blockchain({
       apiKey: API_KEY,
       xPub: XPUB,
-      gapLimit: 20, // we can provide custom gap limit
     });
 
     await expect(blockchain.generateReceivingAddress(CALLBACK_URL)).rejects.toMatchSnapshot();

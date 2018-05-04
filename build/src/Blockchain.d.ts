@@ -1,27 +1,13 @@
 import { ILogger } from "ts-log";
 import { Invoice } from "./index";
 /**
- * Base configuration that has reasonable defaults and do no require to be redefined by the user.
- */
-export interface IBlockchainBaseConfig {
-    apiBaseUrl: string;
-    gapLimit?: number;
-}
-/**
- * Configuration required to be provided by the user.
- */
-export interface IBlockchainRequiredConfig {
-    apiKey: string;
-    xPub: string;
-}
-/**
- * Configuration that the user provides, includes mandatory user configuration and optional base configuration.
- */
-export declare type IBlockchainUserConfig = Partial<IBlockchainBaseConfig> & IBlockchainRequiredConfig;
-/**
  * Combined configuration including base and user provided configurations.
  */
-export declare type IBlockchainConfig = IBlockchainBaseConfig & IBlockchainRequiredConfig;
+export interface IBlockchainConfig {
+    apiKey: string;
+    xPub: string;
+    apiBaseUrl?: string;
+}
 /**
  * Parameters for the generate receiving address endpoint.
  */
@@ -29,7 +15,6 @@ export interface IGenerateReceivingAddressParameters {
     xpub: string;
     callback: string;
     key: string;
-    gap_limit?: number;
 }
 /**
  * Response for the generate receiving address endpoint.
@@ -49,10 +34,6 @@ export interface ICreateInvoiceInfo {
     callbackUrl: string;
 }
 /**
- * Default base configuration.
- */
-export declare const defaultBaseConfig: IBlockchainBaseConfig;
-/**
  * Provides API for receiving payments through blockchain.info service.
  *
  * To get the extended public key (xPub), copy your mnemonic words to http://bip32.org/ "Passphrase" field, wait for it
@@ -71,7 +52,7 @@ export default class Blockchain {
      * @param userConfig User configuration (can override base configuration as well)
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
-    constructor(userConfig: IBlockchainUserConfig, log?: ILogger);
+    constructor(userConfig: IBlockchainConfig, log?: ILogger);
     /**
      * Generates a new receiving address.
      *
