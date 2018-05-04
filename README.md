@@ -35,13 +35,14 @@ The example application requires API key (see [this](https://api.blockchain.info
 To set these, create a ".env" file in the project root directory with contents like:
 
 ```
+SERVER_HOST=example.com
 SERVER_PORT=3000
 SERVER_USE_SSL=false
 SERVER_CERT=fullchain.pem
 SERVER_KEY=privkey.pem
 
 API_KEY=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-XPUB=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+API_XPUB=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 APP_SECRET=XWzk3tMcPw8JTGfjZzDHdPKguAhh2Adw
 APP_REQUIRED_CONFIRMATIONS=4
