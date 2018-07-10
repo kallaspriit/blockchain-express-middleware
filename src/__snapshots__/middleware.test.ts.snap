@@ -37,7 +37,9 @@ Object {
 }
 `;
 
-exports[`Blockchain should throw error when generating receving address and getting a non 2xx response 1`] = `[Error: Request failed with status code 400]`;
+exports[`Blockchain should throw error when fetching gap and getting a non 2xx response 1`] = `[Error: Request failed with status code 400]`;
+
+exports[`Blockchain should throw error when generating receiving address and getting a non 2xx response 1`] = `[Error: Request failed with status code 400]`;
 
 exports[`middleware should fail if update tries to change amount 1`] = `"pending"`;
 

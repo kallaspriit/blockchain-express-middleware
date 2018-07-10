@@ -75,7 +75,7 @@ describe("Blockchain", function () {
             }
         });
     }); });
-    it("should throw error when generating receving address and getting a non 2xx response", function () { return __awaiter(_this, void 0, void 0, function () {
+    it("should throw error when generating receiving address and getting a non 2xx response", function () { return __awaiter(_this, void 0, void 0, function () {
         var blockchain;
         return __generator(this, function (_a) {
             switch (_a.label) {
@@ -86,6 +86,44 @@ describe("Blockchain", function () {
                         xPub: XPUB,
                     });
                     return [4 /*yield*/, expect(blockchain.generateReceivingAddress(CALLBACK_URL)).rejects.toMatchSnapshot()];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should return gap", function () { return __awaiter(_this, void 0, void 0, function () {
+        var mockedGap, blockchain, gap;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    mockedGap = 2;
+                    mockServer.onGet(/checkgap/).reply(HttpStatus.OK, {
+                        gap: mockedGap,
+                    });
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                    });
+                    return [4 /*yield*/, blockchain.getGap()];
+                case 1:
+                    gap = _a.sent();
+                    expect(gap).toEqual(mockedGap);
+                    return [2 /*return*/];
+            }
+        });
+    }); });
+    it("should throw error when fetching gap and getting a non 2xx response", function () { return __awaiter(_this, void 0, void 0, function () {
+        var blockchain;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    mockServer.onGet(/checkgap/).reply(HttpStatus.BAD_REQUEST, "Bad request");
+                    blockchain = new _1.Blockchain({
+                        apiKey: API_KEY,
+                        xPub: XPUB,
+                    });
+                    return [4 /*yield*/, expect(blockchain.getGap()).rejects.toMatchSnapshot()];
                 case 1:
                     _a.sent();
                     return [2 /*return*/];

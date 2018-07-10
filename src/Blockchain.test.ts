@@ -38,7 +38,7 @@ describe("Blockchain", () => {
     expect(receivingAddress).toMatchSnapshot();
   });
 
-  it("should throw error when generating receving address and getting a non 2xx response", async () => {
+  it("should throw error when generating receiving address and getting a non 2xx response", async () => {
     mockServer.onGet(/receive/).reply(HttpStatus.BAD_REQUEST, "Bad request");
 
     const blockchain = new Blockchain({
@@ -47,6 +47,34 @@ describe("Blockchain", () => {
     });
 
     await expect(blockchain.generateReceivingAddress(CALLBACK_URL)).rejects.toMatchSnapshot();
+  });
+
+  it("should return gap", async () => {
+    const mockedGap = 2;
+
+    mockServer.onGet(/checkgap/).reply(HttpStatus.OK, {
+      gap: mockedGap,
+    });
+
+    const blockchain = new Blockchain({
+      apiKey: API_KEY,
+      xPub: XPUB,
+    });
+
+    const gap = await blockchain.getGap();
+
+    expect(gap).toEqual(mockedGap);
+  });
+
+  it("should throw error when fetching gap and getting a non 2xx response", async () => {
+    mockServer.onGet(/checkgap/).reply(HttpStatus.BAD_REQUEST, "Bad request");
+
+    const blockchain = new Blockchain({
+      apiKey: API_KEY,
+      xPub: XPUB,
+    });
+
+    await expect(blockchain.getGap()).rejects.toMatchSnapshot();
   });
 
   it("should create a new invoice with receiving address", async () => {
