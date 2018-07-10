@@ -61,11 +61,16 @@ app.use(
 
 // handle index view request
 app.get("/", async (_request, response, _next) => {
+  const gap = await api.getGap();
+
   // show request payment form and list of existing payments
   response.send(`
     <h1>Bitcoin gateway</h1>
 
     <h2>Request Bitcoin payment</h2>
+
+    <p><strong>Current gap: </strong> ${gap} (see <a href="https://www.blockchain.com/en/api/api_receive" target="_blank">this for details</a>).</p>
+
     <form method="post" action="/pay">
       <p>
         <input type="text" name="dueAmount" value="0.0001" /> Amount (BTC)
