@@ -1,18 +1,18 @@
 import * as express from "express";
 import * as HttpStatus from "http-status-codes";
-import { dummyLogger, ILogger } from "ts-log";
+import { dummyLogger, Logger } from "ts-log";
 import { getPaymentRequestQrCode, Invoice, InvoicePaymentState } from "./index";
 
-export interface IQrCodeParameters {
+export interface QrCodeParameters {
   address: string;
   amount: number | string;
   message: string;
 }
 
-export interface IOptions {
+export interface BlockchainMiddlewareOptions {
   secret: string;
   requiredConfirmations: number;
-  log?: ILogger;
+  log?: Logger;
   saveInvoice(invoice: Invoice): Promise<void>;
   loadInvoice(address: string): Promise<Invoice | undefined>;
 }
@@ -21,14 +21,14 @@ export interface IOptions {
 const OK_RESPONSE = "*ok*";
 const PENDING_RESPONSE = "pending"; // actual value is not important
 
-export default (options: IOptions): express.Router => {
+export default (options: BlockchainMiddlewareOptions): express.Router => {
   const log = options.log !== undefined ? options.log : dummyLogger;
   const router = express.Router();
 
   // handle qr image request
   router.get("/qr", async (request, response, _next) => {
     // TODO: validate request parameters (json schema?)
-    const { address, amount, message } = request.query as IQrCodeParameters;
+    const { address, amount, message } = request.query as QrCodeParameters;
 
     const paymentRequestQrCode = getPaymentRequestQrCode(address, amount, message);
 

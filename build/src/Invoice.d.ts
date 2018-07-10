@@ -1,14 +1,14 @@
 /**
  * Information needed to generate invoice signature.
  */
-export interface IInvoiceSignatureInfo {
+export interface InvoiceSignatureInfo {
     dueAmount: number;
     message: string;
 }
 /**
  * Transaction info.
  */
-export interface ITransaction {
+export interface Transaction {
     hash: string;
     amount: number;
     confirmations: number;
@@ -18,7 +18,7 @@ export interface ITransaction {
 /**
  * State transition info.
  */
-export interface IStateTransition {
+export interface StateTransition {
     previousState: InvoicePaymentState;
     newState: InvoicePaymentState;
     date: Date;
@@ -29,7 +29,7 @@ export interface IStateTransition {
 export declare enum InvoicePaymentState {
     PENDING = "PENDING",
     WAITING_FOR_CONFIRMATION = "WAITING_FOR_CONFIRMATION",
-    CONFIRMED = "CONFIRMED",
+    CONFIRMED = "CONFIRMED"
 }
 /**
  * Invoice amount state enumeration.
@@ -37,19 +37,19 @@ export declare enum InvoicePaymentState {
 export declare enum InvoiceAmountState {
     EXACT = "EXACT",
     OVERPAID = "OVERPAID",
-    UNDERPAID = "UNDERPAID",
+    UNDERPAID = "UNDERPAID"
 }
 /**
  * Serialized invoice info.
  */
-export interface IInvoice {
+export interface InvoiceInfo {
     dueAmount: number;
     message: string;
     address: string;
     createdDate: Date;
     updatedDate: Date;
-    transactions: ITransaction[];
-    stateTransitions: IStateTransition[];
+    transactions: Transaction[];
+    stateTransitions: StateTransition[];
     paymentState: InvoicePaymentState;
 }
 /**
@@ -89,11 +89,11 @@ export default class Invoice {
     /**
      * List of transactions associated with the invoice.
      */
-    transactions: ITransaction[];
+    transactions: Transaction[];
     /**
      * List of invoice state transitions.
      */
-    stateTransitions: IStateTransition[];
+    stateTransitions: StateTransition[];
     /**
      * Invoice payment state.
      */
@@ -105,7 +105,7 @@ export default class Invoice {
      *
      * @param info Invoice constructor info or serialized invoice info
      */
-    constructor(info: InvoiceConstructorInfo | IInvoice);
+    constructor(info: InvoiceConstructorInfo | InvoiceInfo);
     /**
      * Returns invoice signature.
      *
@@ -114,7 +114,7 @@ export default class Invoice {
      * @param info Signature info
      * @param secret Secret used to generate the signature
      */
-    static getInvoiceSignature(info: IInvoiceSignatureInfo, secret: string): string;
+    static getInvoiceSignature(info: InvoiceSignatureInfo, secret: string): string;
     /**
      * Returns whether requested state transition is valid.
      *
@@ -135,7 +135,7 @@ export default class Invoice {
      *
      * @param transaction Transaction info
      */
-    registerTransaction(transaction: Omit<ITransaction, "createdDate" | "updatedDate">): void;
+    registerTransaction(transaction: Omit<Transaction, "createdDate" | "updatedDate">): void;
     /**
      * Returns invoice paid amount.
      *
@@ -197,5 +197,5 @@ export default class Invoice {
      *
      * The information returned by this method can be passed into the constructor to de-serialize the invoice.
      */
-    toJSON(): IInvoice;
+    toJSON(): InvoiceInfo;
 }

@@ -3,15 +3,15 @@ import * as express from "express";
 import * as HttpStatus from "http-status-codes";
 import * as querystring from "querystring";
 import * as supertest from "supertest";
-import { ILogger } from "ts-log";
-import blockchainMiddleware, { IInvoice, Invoice } from "./";
+import { Logger } from "ts-log";
+import blockchainMiddleware, { Invoice, InvoiceInfo } from "./";
 import { processInvoiceForSnapshot } from "./Blockchain.test";
 
 const SECRET = "zzz";
 const RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
 
 // invoices "database" emulated with a simple array (store the data only)
-const invoiceDatabase: IInvoice[] = [];
+const invoiceDatabase: InvoiceInfo[] = [];
 
 let server: supertest.SuperTest<supertest.Test>;
 
@@ -235,7 +235,7 @@ describe("middleware", () => {
   });
 
   it("should accept custom logger", async () => {
-    const mockLogger: ILogger = {
+    const mockLogger: Logger = {
       trace: jest.fn(),
       debug: jest.fn(),
       info: jest.fn(),
@@ -278,7 +278,7 @@ async function loadInvoice(address: string): Promise<Invoice | undefined> {
   return new Invoice(invoiceInfo);
 }
 
-function processInvoicesDatabaseForSnapshot(invoices: IInvoice[]): IInvoice[] {
+function processInvoicesDatabaseForSnapshot(invoices: InvoiceInfo[]): InvoiceInfo[] {
   invoices.forEach(processInvoiceForSnapshot);
 
   return invoices;

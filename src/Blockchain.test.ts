@@ -1,8 +1,8 @@
 import Axios from "axios";
 import MockServer from "axios-mock-adapter";
 import * as HttpStatus from "http-status-codes";
-import { ILogger } from "ts-log";
-import { Blockchain, IInvoice, Invoice } from "./";
+import { Logger } from "ts-log";
+import { Blockchain, Invoice, InvoiceInfo } from "./";
 
 const CALLBACK_URL = "https://example.com";
 const RECEIVING_ADDRESS = "2FupTEd3PDF7HVxNrzNqQGGoWZA4rqiphq";
@@ -78,7 +78,7 @@ describe("Blockchain", () => {
       callback: CALLBACK_URL,
     });
 
-    const mockLogger: ILogger = {
+    const mockLogger: Logger = {
       trace: jest.fn(),
       debug: jest.fn(),
       info: jest.fn(),
@@ -106,7 +106,7 @@ describe("Blockchain", () => {
   });
 });
 
-export function processInvoiceForSnapshot<T extends Invoice | IInvoice>(invoice: T): T {
+export function processInvoiceForSnapshot<T extends Invoice | InvoiceInfo>(invoice: T): T {
   invoice.createdDate = new Date("2018-04-19T13:48:05.316Z");
   invoice.updatedDate = new Date("2018-04-20T13:48:05.316Z");
 

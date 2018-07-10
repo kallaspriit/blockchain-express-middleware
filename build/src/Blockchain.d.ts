@@ -1,9 +1,9 @@
-import { ILogger } from "ts-log";
+import { Logger } from "ts-log";
 import { Invoice } from "./index";
 /**
  * Combined configuration including base and user provided configurations.
  */
-export interface IBlockchainConfig {
+export interface BlockchainConfig {
     apiKey: string;
     xPub: string;
     apiBaseUrl?: string;
@@ -11,23 +11,36 @@ export interface IBlockchainConfig {
 /**
  * Parameters for the generate receiving address endpoint.
  */
-export interface IGenerateReceivingAddressParameters {
+export interface GenerateReceivingAddressParameters {
     xpub: string;
     callback: string;
     key: string;
 }
 /**
- * Response for the generate receiving address endpoint.
+ * Parameters for the checking xpub gap.
  */
-export interface IReceivingAddress {
+export interface CheckGapParameters {
+    xpub: string;
+    key: string;
+}
+/**
+ * Response for the generate receiving address request.
+ */
+export interface GenerateReceivingAddressResponse {
     address: string;
     index: number;
     callback: string;
 }
 /**
+ * Response for the check gap request.
+ */
+export interface CheckGapResponse {
+    gap: number;
+}
+/**
  * Parameters for creating an invoice.
  */
-export interface ICreateInvoiceInfo {
+export interface CreateInvoiceInfo {
     dueAmount: number;
     message: string;
     secret: string;
@@ -52,13 +65,17 @@ export default class Blockchain {
      * @param userConfig User configuration (can override base configuration as well)
      * @param log Logger to use (defaults to console, but you can use bunyan etc)
      */
-    constructor(userConfig: IBlockchainConfig, log?: ILogger);
+    constructor(userConfig: BlockchainConfig, log?: Logger);
     /**
      * Generates a new receiving address.
      *
      * @param callbackUrl URL to call on new transactions and confirmation count changes
      */
-    generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress>;
+    generateReceivingAddress(callbackUrl: string): Promise<GenerateReceivingAddressResponse>;
+    /**
+     * Returns current xpub gap.
+     */
+    getGap(): Promise<number>;
     /**
      * Creates a new invoice.
      *
@@ -66,5 +83,5 @@ export default class Blockchain {
      *
      * @param info Invoice info
      */
-    createInvoice({dueAmount, message, secret, callbackUrl}: ICreateInvoiceInfo): Promise<Invoice>;
+    createInvoice({ dueAmount, message, secret, callbackUrl }: CreateInvoiceInfo): Promise<Invoice>;
 }

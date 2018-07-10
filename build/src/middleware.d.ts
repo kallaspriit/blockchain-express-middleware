@@ -1,18 +1,17 @@
-/// <reference types="express" />
 import * as express from "express";
-import { ILogger } from "ts-log";
+import { Logger } from "ts-log";
 import { Invoice } from "./index";
-export interface IQrCodeParameters {
+export interface QrCodeParameters {
     address: string;
     amount: number | string;
     message: string;
 }
-export interface IOptions {
+export interface BlockchainMiddlewareOptions {
     secret: string;
     requiredConfirmations: number;
-    log?: ILogger;
+    log?: Logger;
     saveInvoice(invoice: Invoice): Promise<void>;
     loadInvoice(address: string): Promise<Invoice | undefined>;
 }
-declare const _default: (options: IOptions) => express.Router;
+declare const _default: (options: BlockchainMiddlewareOptions) => express.Router;
 export default _default;

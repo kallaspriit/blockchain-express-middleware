@@ -1,12 +1,12 @@
 import Axios from "axios";
 import * as querystring from "querystring";
-import { dummyLogger, ILogger } from "ts-log";
+import { dummyLogger, Logger } from "ts-log";
 import { Invoice } from "./index";
 
 /**
  * Combined configuration including base and user provided configurations.
  */
-export interface IBlockchainConfig {
+export interface BlockchainConfig {
   apiKey: string;
   xPub: string;
   apiBaseUrl?: string;
@@ -15,25 +15,40 @@ export interface IBlockchainConfig {
 /**
  * Parameters for the generate receiving address endpoint.
  */
-export interface IGenerateReceivingAddressParameters {
+export interface GenerateReceivingAddressParameters {
   xpub: string;
   callback: string;
   key: string;
 }
 
 /**
- * Response for the generate receiving address endpoint.
+ * Parameters for the checking xpub gap.
  */
-export interface IReceivingAddress {
+export interface CheckGapParameters {
+  xpub: string;
+  key: string;
+}
+
+/**
+ * Response for the generate receiving address request.
+ */
+export interface GenerateReceivingAddressResponse {
   address: string;
   index: number;
   callback: string;
 }
 
 /**
+ * Response for the check gap request.
+ */
+export interface CheckGapResponse {
+  gap: number;
+}
+
+/**
  * Parameters for creating an invoice.
  */
-export interface ICreateInvoiceInfo {
+export interface CreateInvoiceInfo {
   dueAmount: number;
   message: string;
   secret: string;
@@ -49,7 +64,7 @@ export interface ICreateInvoiceInfo {
  * See https://blockchain.info/api/api_receive for API documentation.
  */
 export default class Blockchain {
-  private readonly config: Required<IBlockchainConfig>;
+  private readonly config: Required<BlockchainConfig>;
 
   /**
    * Constructor.
@@ -59,7 +74,7 @@ export default class Blockchain {
    * @param userConfig User configuration (can override base configuration as well)
    * @param log Logger to use (defaults to console, but you can use bunyan etc)
    */
-  public constructor(userConfig: IBlockchainConfig, private readonly log: ILogger = dummyLogger) {
+  public constructor(userConfig: BlockchainConfig, private readonly log: Logger = dummyLogger) {
     this.config = {
       apiBaseUrl: "https://api.blockchain.info/v2/receive",
       ...userConfig,
@@ -71,9 +86,9 @@ export default class Blockchain {
    *
    * @param callbackUrl URL to call on new transactions and confirmation count changes
    */
-  public async generateReceivingAddress(callbackUrl: string): Promise<IReceivingAddress> {
+  public async generateReceivingAddress(callbackUrl: string): Promise<GenerateReceivingAddressResponse> {
     const { apiBaseUrl, xPub, apiKey } = this.config;
-    const parameters: IGenerateReceivingAddressParameters = {
+    const parameters: GenerateReceivingAddressParameters = {
       xpub: xPub,
       callback: callbackUrl,
       key: apiKey,
@@ -92,7 +107,7 @@ export default class Blockchain {
 
     // attempt to generate the receiving address (throws for non 2xx response)
     try {
-      const response = await Axios.get<IReceivingAddress>(url);
+      const response = await Axios.get<GenerateReceivingAddressResponse>(url);
 
       return response.data;
     } catch (error) {
@@ -114,13 +129,57 @@ export default class Blockchain {
   }
 
   /**
+   * Returns current xpub gap.
+   */
+  public async getGap(): Promise<number> {
+    const { apiBaseUrl, xPub, apiKey } = this.config;
+    const parameters: CheckGapParameters = {
+      xpub: xPub,
+      key: apiKey,
+    };
+
+    // build the request url
+    const url = `${apiBaseUrl}/checkgap?${querystring.stringify(parameters)}`;
+
+    this.log.info(
+      {
+        parameters,
+        url,
+      },
+      "checking gap",
+    );
+
+    // attempt to generate the receiving address (throws for non 2xx response)
+    try {
+      const response = await Axios.get<CheckGapResponse>(url);
+
+      return response.data.gap;
+    } catch (error) {
+      // log failure and rethrow the error
+      this.log.error(
+        {
+          message: error.message,
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          parameters,
+          url,
+        },
+        "getting gap failed",
+      );
+
+      throw error;
+    }
+  }
+
+  /**
    * Creates a new invoice.
    *
    * First generates the receiving address and then the invoice.
    *
    * @param info Invoice info
    */
-  public async createInvoice({ dueAmount, message, secret, callbackUrl }: ICreateInvoiceInfo): Promise<Invoice> {
+  public async createInvoice({ dueAmount, message, secret, callbackUrl }: CreateInvoiceInfo): Promise<Invoice> {
     // build invoice signature to later verify that the handle payment request is valid
     const signature = Invoice.getInvoiceSignature(
       {

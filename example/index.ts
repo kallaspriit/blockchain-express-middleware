@@ -6,7 +6,7 @@ import * as http from "http";
 import * as HttpStatus from "http-status-codes";
 import * as https from "https";
 import * as querystring from "querystring";
-import blockchainMiddleware, { bitcoinToSatoshi, Blockchain, IInvoice, Invoice, satoshiToBitcoin } from "../src";
+import blockchainMiddleware, { bitcoinToSatoshi, Blockchain, Invoice, InvoiceInfo, satoshiToBitcoin } from "../src";
 
 // load the .env configuration (https://github.com/motdotla/dotenv)
 dotenv.config();
@@ -36,7 +36,7 @@ const config = {
 };
 
 // invoices "database" emulated with a simple array (store the data only)
-const invoiceDatabase: IInvoice[] = [];
+const invoiceDatabase: InvoiceInfo[] = [];
 
 // initiate api
 const api = new Blockchain(config.api, console);

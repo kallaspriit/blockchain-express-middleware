@@ -1,2 +1,2 @@
-import { IInvoice, Invoice } from "./";
-export declare function processInvoiceForSnapshot<T extends Invoice | IInvoice>(invoice: T): T;
+import { Invoice, InvoiceInfo } from "./";
+export declare function processInvoiceForSnapshot<T extends Invoice | InvoiceInfo>(invoice: T): T;

@@ -103,6 +103,7 @@ var Invoice = /** @class */ (function () {
      * @param newState Requested invoice state
      */
     Invoice.isValidInvoiceStateTransition = function (currentState, newState) {
+        var _a;
         // allow not changing the state
         if (currentState === newState) {
             return true;
@@ -122,7 +123,6 @@ var Invoice = /** @class */ (function () {
         }
         // transition is valid if the new state is in the valid transitions list
         return validTransitions.indexOf(newState) !== -1;
-        var _a;
     };
     /**
      * Returns whether given invoice payment state is considered final.

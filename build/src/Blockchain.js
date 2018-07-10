@@ -22,8 +22,8 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     function step(op) {
         if (f) throw new TypeError("Generator is already executing.");
         while (_) try {
-            if (f = 1, y && (t = y[op[0] & 2 ? "return" : op[0] ? "throw" : "next"]) && !(t = t.call(y, op[1])).done) return t;
-            if (y = 0, t) op = [0, t.value];
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
             switch (op[0]) {
                 case 0: case 1: t = op; break;
                 case 4: _.label++; return { value: op[1], done: false };
@@ -110,6 +110,49 @@ var Blockchain = /** @class */ (function () {
                             url: url,
                         }, "generating receiving address failed");
                         throw error_1;
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    /**
+     * Returns current xpub gap.
+     */
+    Blockchain.prototype.getGap = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a, apiBaseUrl, xPub, apiKey, parameters, url, response, error_2;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        _a = this.config, apiBaseUrl = _a.apiBaseUrl, xPub = _a.xPub, apiKey = _a.apiKey;
+                        parameters = {
+                            xpub: xPub,
+                            key: apiKey,
+                        };
+                        url = apiBaseUrl + "/checkgap?" + querystring.stringify(parameters);
+                        this.log.info({
+                            parameters: parameters,
+                            url: url,
+                        }, "checking gap");
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, axios_1.default.get(url)];
+                    case 2:
+                        response = _b.sent();
+                        return [2 /*return*/, response.data.gap];
+                    case 3:
+                        error_2 = _b.sent();
+                        // log failure and rethrow the error
+                        this.log.error({
+                            message: error_2.message,
+                            status: error_2.response.status,
+                            statusText: error_2.response.statusText,
+                            data: error_2.response.data,
+                            parameters: parameters,
+                            url: url,
+                        }, "getting gap failed");
+                        throw error_2;
                     case 4: return [2 /*return*/];
                 }
             });

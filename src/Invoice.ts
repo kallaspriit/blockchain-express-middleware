@@ -3,7 +3,7 @@ import { createHmac } from "crypto";
 /**
  * Information needed to generate invoice signature.
  */
-export interface IInvoiceSignatureInfo {
+export interface InvoiceSignatureInfo {
   dueAmount: number;
   message: string;
 }
@@ -11,7 +11,7 @@ export interface IInvoiceSignatureInfo {
 /**
  * Transaction info.
  */
-export interface ITransaction {
+export interface Transaction {
   hash: string;
   amount: number;
   confirmations: number;
@@ -22,7 +22,7 @@ export interface ITransaction {
 /**
  * State transition info.
  */
-export interface IStateTransition {
+export interface StateTransition {
   previousState: InvoicePaymentState;
   newState: InvoicePaymentState;
   date: Date;
@@ -56,14 +56,14 @@ export enum InvoiceAmountState {
 /**
  * Serialized invoice info.
  */
-export interface IInvoice {
+export interface InvoiceInfo {
   dueAmount: number;
   message: string;
   address: string;
   createdDate: Date;
   updatedDate: Date;
-  transactions: ITransaction[];
-  stateTransitions: IStateTransition[];
+  transactions: Transaction[];
+  stateTransitions: StateTransition[];
   paymentState: InvoicePaymentState;
 }
 
@@ -75,7 +75,7 @@ export type InvoiceConstructorInfo = Pick<Invoice, "dueAmount" | "message" | "ad
 /**
  * Simple array map type.
  */
-interface IArrayMap<T> {
+interface ArrayMap<T> {
   [x: string]: T[] | undefined;
 }
 
@@ -118,12 +118,12 @@ export default class Invoice {
   /**
    * List of transactions associated with the invoice.
    */
-  public transactions: ITransaction[] = [];
+  public transactions: Transaction[] = [];
 
   /**
    * List of invoice state transitions.
    */
-  public stateTransitions: IStateTransition[] = [];
+  public stateTransitions: StateTransition[] = [];
 
   /**
    * Invoice payment state.
@@ -137,7 +137,7 @@ export default class Invoice {
    *
    * @param info Invoice constructor info or serialized invoice info
    */
-  public constructor(info: InvoiceConstructorInfo | IInvoice) {
+  public constructor(info: InvoiceConstructorInfo | InvoiceInfo) {
     // check whether we got the serialized info
     if (isSerializedInvoice(info)) {
       // de-serialize if data matching invoice interface is given
@@ -167,7 +167,7 @@ export default class Invoice {
    * @param info Signature info
    * @param secret Secret used to generate the signature
    */
-  public static getInvoiceSignature(info: IInvoiceSignatureInfo, secret: string) {
+  public static getInvoiceSignature(info: InvoiceSignatureInfo, secret: string) {
     // build the signature payload
     const tokens = [info.dueAmount.toString(), info.message];
     const payload = tokens.join(":");
@@ -194,7 +194,7 @@ export default class Invoice {
     }
 
     // map of current to possible new states
-    const validTransitionsMap: IArrayMap<InvoicePaymentState> = {
+    const validTransitionsMap: ArrayMap<InvoicePaymentState> = {
       [InvoicePaymentState.PENDING]: [InvoicePaymentState.WAITING_FOR_CONFIRMATION, InvoicePaymentState.CONFIRMED],
       [InvoicePaymentState.WAITING_FOR_CONFIRMATION]: [InvoicePaymentState.CONFIRMED],
       [InvoicePaymentState.CONFIRMED]: [],
@@ -231,7 +231,7 @@ export default class Invoice {
    *
    * @param transaction Transaction info
    */
-  public registerTransaction(transaction: Omit<ITransaction, "createdDate" | "updatedDate">) {
+  public registerTransaction(transaction: Omit<Transaction, "createdDate" | "updatedDate">) {
     // update updated date
     this.updatedDate = new Date();
 
@@ -395,7 +395,7 @@ export default class Invoice {
    *
    * The information returned by this method can be passed into the constructor to de-serialize the invoice.
    */
-  public toJSON(): IInvoice {
+  public toJSON(): InvoiceInfo {
     return {
       dueAmount: this.dueAmount,
       message: this.message,
@@ -413,6 +413,6 @@ export default class Invoice {
  * Returns whether given information likely matches serialized invoice interface.
  */
 // tslint:disable-next-line:no-any
-function isSerializedInvoice(info: any): info is IInvoice {
+function isSerializedInvoice(info: any): info is InvoiceInfo {
   return info.paymentState !== undefined;
 }
